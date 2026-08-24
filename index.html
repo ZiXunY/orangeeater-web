@@ -1,0 +1,76 @@
+<!DOCTYPE html>
+<html lang="zh">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Whispers of Orange Island</title>
+    <style>
+        :root {
+            --primary-color: #1a1a1a;
+            --accent-color: #d35400;
+            --text-color: #e0e0e0;
+            --bg-color: #0a0a0a;
+        }
+
+        body {
+            font-family: 'Courier New', Courier, monospace;
+            background-color: var(--bg-color);
+            color: var(--text-color);
+            margin: 0;
+            padding: 0;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            min-height: 100vh;
+            text-align: center;
+        }
+
+        h1 {
+            font-size: 3em;
+            letter-spacing: 5px;
+            color: var(--accent-color);
+            text-transform: uppercase;
+            text-shadow: 0 0 10px rgba(211, 84, 0, 0.5);
+            margin-bottom: 20px;
+        }
+
+        .subtitle {
+            font-size: 1.5em;
+            color: #888;
+            letter-spacing: 2px;
+            animation: pulse 2s infinite;
+        }
+
+        @keyframes pulse {
+            0% { opacity: 0.5; }
+            50% { opacity: 1; }
+            100% { opacity: 0.5; }
+        }
+        
+        .dots {
+            display: inline-block;
+            width: 30px;
+            text-align: left;
+        }
+        
+        @keyframes typing {
+            0% { content: ""; }
+            25% { content: "."; }
+            50% { content: ".."; }
+            75% { content: "..."; }
+            100% { content: ""; }
+        }
+        
+        .dots::after {
+            content: "";
+            animation: typing 2s infinite;
+        }
+
+    </style>
+</head>
+<body>
+    <h1>Whispers of Orange Island</h1>
+    <div class="subtitle">under construction<span class="dots"></span></div>
+</body>
+</html>
