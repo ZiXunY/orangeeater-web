@@ -27,7 +27,7 @@
         }
 
         .header-content {
-            width: 850px; /* 和主图对齐宽度 */
+            width: 850px; 
             padding: 20px 0;
             display: flex;
         }
@@ -99,8 +99,8 @@
         /* 隐形点击热区 */
         .avatar-hotspot {
             position: absolute;
-            width: 24px;
-            height: 24px;
+            width: 30px;
+            height: 30px;
             border-radius: 50%;
             transform: translate(-50%, -50%);
             cursor: pointer;
@@ -109,11 +109,12 @@
             border: 2px solid transparent;
         }
 
-        .avatar-hotspot:hover {
+        .avatar-hotspot:hover, .avatar-hotspot.active-spot {
             border: 2px solid #d35400;
             background: rgba(211, 84, 0, 0.3);
             transform: translate(-50%, -50%) scale(1.3);
             box-shadow: 0 0 10px #d35400;
+            z-index: 10;
         }
 
         /* =========================
@@ -126,7 +127,7 @@
             align-items: center;
             background: #0a0a0a;
             border-top: 1px solid #333;
-            padding: 60px 20px;
+            padding: 30px 20px;
             transition: all 0.3s ease;
         }
 
@@ -175,13 +176,14 @@
             color: #d35400;
             font-size: 16px;
             font-weight: bold;
-            margin-bottom: 10px;
+            margin-bottom: 5px;
         }
 
+        /* 横向排列的下拉框区域 */
         .puzzle-section {
             display: flex;
-            flex-direction: column;
-            gap: 15px;
+            flex-direction: row; /* 横向排列 */
+            gap: 20px;
             background: #151515;
             padding: 20px;
             border-radius: 8px;
@@ -190,13 +192,14 @@
 
         .select-group {
             display: flex;
-            align-items: center;
-            justify-content: space-between;
+            flex-direction: column; /* 标签在输入框上方 */
+            flex: 1; /* 平分空间 */
+            gap: 8px;
         }
 
         .select-group label {
             color: #aaa;
-            font-size: 14px;
+            font-size: 13px;
         }
 
         select {
@@ -205,7 +208,7 @@
             border: 1px solid #444;
             padding: 8px 12px;
             border-radius: 4px;
-            width: 60%;
+            width: 100%;
             outline: none;
             cursor: pointer;
             font-size: 14px;
@@ -244,15 +247,6 @@
             color: #666;
         }
 
-        .footer-title {
-            font-size: 16px;
-            font-weight: bold;
-            color: #888;
-            letter-spacing: 2px;
-            margin-bottom: 15px;
-            text-transform: uppercase;
-        }
-
         .footer-links {
             display: flex;
             justify-content: center;
@@ -287,12 +281,9 @@
          ========================= -->
     <header id="site-header">
         <div class="header-content">
-            <!-- 左侧 Logo (占 2/3) -->
             <div class="header-left">
                 <img src="images/logo.png" alt="Whispers of Orange Island" class="site-logo">
             </div>
-            
-            <!-- 右侧语言切换 (占 1/3) -->
             <div class="header-right">
                 <button class="lang-btn active" data-lang="en">EN</button>
                 <button class="lang-btn" data-lang="zh">中文</button>
@@ -304,14 +295,9 @@
          上半部分：家族树
          ========================= -->
     <section id="family-tree">
-        <div style="position: relative; width: 850px; height: 400px;">
+        <div id="tree-container" style="position: relative; width: 850px; height: 400px;">
             <img src="images/family-tree/family-tree.png" alt="Family Tree" class="family-tree-image">
-            
-            <div class="avatar-hotspot" data-id="cD" style="left: 26.5%; top: 23.5%;"></div>
-            <div class="avatar-hotspot" data-id="Bc" style="left: 7.5%; top: 37.5%;"></div>
-            <div class="avatar-hotspot" data-id="cE" style="left: 33.5%; top: 46.5%;"></div>
-            <div class="avatar-hotspot" data-id="i" style="left: 13.5%; top: 55.5%;"></div>
-            <div class="avatar-hotspot" data-id="f" style="left: 11.5%; top: 26.5%;"></div>
+            <!-- 热区会由 JavaScript 自动基于精确像素计算并生成在此处 -->
         </div>
     </section>
 
@@ -334,33 +320,21 @@
                 
                 <div class="puzzle-section">
                     <div class="select-group">
-                        <label id="ui-label-birth">Birth Place:</label>
-                        <select id="select-birth">
-                            <option value="">-- Select --</option>
-                            <option value="orange_island">Orange Island</option>
-                            <option value="mainland">Mainland</option>
-                            <option value="outside">Outside Island</option>
+                        <label id="ui-label-birthplace">Birth Place:</label>
+                        <select id="select-birthplace">
+                            <!-- 选项由 JS 生成 -->
                         </select>
                     </div>
                     <div class="select-group">
-                        <label id="ui-label-death">Death Year:</label>
-                        <select id="select-death">
-                            <option value="">-- Select --</option>
-                            <option value="1980">1980</option>
-                            <option value="1985">1985</option>
-                            <option value="2017">2017</option>
-                            <option value="2026">2026</option>
+                        <label id="ui-label-birthyear">Birth Year:</label>
+                        <select id="select-birthyear">
+                            <!-- 选项自动生成 -->
                         </select>
                     </div>
                     <div class="select-group">
-                        <label id="ui-label-cause">Cause of Death:</label>
-                        <select id="select-cause">
-                            <option value="">-- Select --</option>
-                            <option value="illness">Illness (Albinism)</option>
-                            <option value="depression">Depression</option>
-                            <option value="shipwreck">Shipwreck</option>
-                            <option value="assassination">Assassination</option>
-                            <option value="explosion">Massive Explosion</option>
+                        <label id="ui-label-deathyear">Death Year:</label>
+                        <select id="select-deathyear">
+                            <!-- 选项自动生成 -->
                         </select>
                     </div>
                 </div>
@@ -374,7 +348,6 @@
          Footer
          ========================= -->
     <footer>
-        <div class="footer-title">Whispers of Orange Island</div>
         <div class="footer-links">
             <a href="https://store.steampowered.com/app/5165730" target="_blank">Steam</a>
             <a href="https://discord.gg/GMvHrNVfru" target="_blank">Discord</a>
@@ -394,78 +367,185 @@
             en: {
                 prompt: "Click on a character portrait in the family tree above<br>and complete their profile to unlock their memories.",
                 puzzleTitle: "Complete the character's profile to unlock their biography:",
-                birthLabel: "Birth Place:",
-                deathLabel: "Death Year:",
-                causeLabel: "Cause of Death:",
-                birthOptions: ["-- Select --", "Orange Island", "Mainland", "Outside Island"],
-                deathOptions: ["-- Select --", "1980", "1985", "2017", "2026"],
-                causeOptions: ["-- Select --", "Illness (Albinism)", "Depression", "Shipwreck", "Assassination", "Massive Explosion"],
+                bpLabel: "Birth Place:",
+                byLabel: "Birth Year:",
+                dyLabel: "Death Year:",
+                selectDefault: "-- Select --",
+                places: { "orange_island": "Orange Island", "outside": "Outside Island" },
                 bioPrefix: "<strong>Unlocked Memory:</strong><br><br>"
             },
             zh: {
                 prompt: "请点击上方家族树中的人物头像，补全档案线索，<br>以解锁其生平记忆。",
                 puzzleTitle: "请补全该角色的档案线索，以解锁生平记忆：",
-                birthLabel: "出生地 (Birth Place):",
-                deathLabel: "去世年代 (Death Year):",
-                causeLabel: "死因 (Cause of Death):",
-                birthOptions: ["-- 选择 --", "Orange Island (橘子岛)", "大陆 (Mainland)", "岛外 (Outside Island)"],
-                deathOptions: ["-- 选择 --", "1980", "1985", "2017", "2026"],
-                causeOptions: ["-- 选择 --", "病逝 (白化病)", "郁郁而终", "海难", "暗杀伪装成意外", "大爆炸"],
+                bpLabel: "出生地 (Birth Place):",
+                byLabel: "出生年份 (Birth Year):",
+                dyLabel: "死亡年份 (Death Year):",
+                selectDefault: "-- 选择 --",
+                places: { "orange_island": "橘子岛", "outside": "岛外" },
                 bioPrefix: "<strong>解锁生平：</strong><br><br>"
             }
         };
 
-        // 2. 游戏数据库 (双语支持)
+        // 2. 游戏数据库 (含 34 个角色精确像素坐标和生平)
         const charDatabase = {
-            "cD": {
-                name: "cD", posX: "26.5%", posY: "23.5%", 
-                correctBirth: "orange_island", correctDeath: "1985", correctCause: "depression",
-                bio_en: "The 2nd generation of the c family, founder of the family business. Established the 'nocturnal society' and 'Holy Water Ritual' to protect his albino daughter Bc. What started as paternal love became a dystopian cage. Died of depression after his daughter's death and his son's refusal to return.",
-                bio_zh: "c家第二代，家族产业奠基人。为保护患白化病的女儿Bc建立“夜间社会”规则和“圣水仪式”，初衷是父爱，却造就后来的反乌托邦牢笼。在女儿去世、儿子不肯回岛后，郁郁而终。"
-            },
-            "Bc": {
-                name: "Bc", posX: "7.5%", posY: "37.5%",
-                correctBirth: "orange_island", correctDeath: "1980", correctCause: "illness",
-                bio_en: "Daughter of cD and Ba1, born with albinism. The 'first curse' of the two families' marriage. Despite being spoiled, she always felt unfortunate. Her condition led to the custom of 'sleeping by day and working by night'.",
-                bio_zh: "cD与Ba1之女，先天性白化病患者。两家联姻的“第一次诅咒”。虽受尽溺爱却一直觉得自己不幸，她的病情促使了“昼伏夜出”习俗的形成。"
-            },
-            "cE": {
-                name: "cE", posX: "33.5%", posY: "46.5%",
-                correctBirth: "orange_island", correctDeath: "2026", correctCause: "explosion",
-                bio_en: "Son of cD and E. Sent away from the island at age 3, resulting in a twisted childhood. An elitist who built the HorseCrab factory to maintain oppressive rule through cruel blood extraction. Died in the 2026 massive explosion, becoming a boss of obsession who continues to poison the water tower.",
-                bio_zh: "cD与E之子。3岁被送出岛，造成扭曲童年。精英主义者，建立鲎工厂残酷抽血维持高压统治。死于2026大爆炸，死后化为执念Boss继续向水塔投毒。"
-            },
-            "i": {
-                name: "i", posX: "13.5%", posY: "55.5%",
-                correctBirth: "outside", correctDeath: "2017", correctCause: "assassination",
-                bio_en: "A marine biologist full of justice who loved the sea. After discovering the truth behind the HorseCrab factory's cruel practices, he was assassinated, and his death was disguised as an accident.",
-                bio_zh: "热爱大海、充满正义感的海洋学家。发现了鲎工厂虐杀鲎的真相后，被暗杀并伪装成意外。"
-            },
-            "f": {
-                name: "f", posX: "11.5%", posY: "26.5%",
-                correctBirth: "orange_island", correctDeath: "1980", correctCause: "shipwreck",
-                bio_en: "A quiet and kind fisherman, representing the pure old days of the island. Whether he caught fish or not, he enjoyed the feeling of riding the waves. Ultimately died in a shipwreck.",
-                bio_zh: "沉默善良的渔民，代表岛上淳朴的旧时光。无论捕不捕得到鱼，都觉得乘风破浪的感觉很好。最终死于一场海难。"
-            }
+            "Player": { x: 200.5, y: 350, bp: "orange_island", by: "2022", dy: "2026", 
+                bio_en: "The protagonist. Comatose due to family illness and environmental pollution, her soul left her body. Her final mission is to donate her corneas to her blind father and return the island to nature.", 
+                bio_zh: "第四代，主角。因家族遗传病和环境污染陷入昏迷，灵魂离体。最终使命是捐献角膜给失明的父亲，让小岛重归自然。" },
+            "Guide": { x: 138.5, y: 277, bp: "orange_island", by: "1993", dy: "2022", 
+                bio_en: "Mother of the Player. Passed away giving birth. Her soul lingered to become a Guide, leading her daughter through the island's haunting history.", 
+                bio_zh: "主角母亲 Bi1。因难产去世，灵魂化为引导者（Guide），指引女儿走完这趟探寻家族历史的旅程。" },
+            "a": { x: 138.5, y: 46, bp: "outside", by: "1899", dy: "1956", 
+                bio_en: "First generation islander and fisherman. Named the island and discovered the medicinal value of the Sea-Thorn.", 
+                bio_zh: "第一代岛民、渔民。为橘子岛命名，并发现了海棘果的药用价值。" },
+            "B": { x: 188.5, y: 47, bp: "outside", by: "1901", dy: "1956", 
+                bio_en: "Wife of 'a'. One of the earliest settlers who braved the untamed seas.", 
+                bio_zh: "a 的妻子，与丈夫一同在荒芜时期建立起渔业生活的初代岛民。" },
+            "c": { x: 239.5, y: 43, bp: "outside", by: "1898", dy: "1960", 
+                bio_en: "Second batch of settlers. Introduced the Royal Sour Orange and grafted it to create the iconic 'Moon-white Orange'.", 
+                bio_zh: "第二批上岛者。引入皇家酸橙并意外嫁接出“月白橙”，奠定了全岛的橙子产业基础。" },
+            "D": { x: 289.5, y: 50, bp: "outside", by: "1902", dy: "1963", 
+                bio_en: "Wife of 'c'. Co-founder of the island's earliest agricultural prosperity.", 
+                bio_zh: "c 的妻子，共同开创了橘子岛早期的农业繁荣时代。" },
+            "Ba1": { x: 188.5, y: 104, bp: "orange_island", by: "1924", dy: "1944", 
+                bio_en: "Daughter of a and B, first wife of cD. Died giving birth to the albino daughter Bc, causing the first rift between the two founding families.", 
+                bio_zh: "a 与 B 之女，cD 第一任妻子。生下患白化病的女儿 Bc 时难产去世，导致两大家族决裂。" },
+            "cD": { x: 264.5, y: 105, bp: "outside", by: "1924", dy: "1985", 
+                bio_en: "The second Island Chief. Established the 'nocturnal society' and Holy Water Ritual to protect his albino daughter, inadvertently creating a dystopian cage.", 
+                bio_zh: "第二任岛主。为保护患白化病的女儿建立“夜间社会”规则和“圣水仪式”，初衷是父爱，却造就后来的反乌托邦牢笼。" },
+            "Ba2": { x: 138.5, y: 104, bp: "orange_island", by: "1924", dy: "1995", 
+                bio_en: "Twin sister of Ba1. A gentle lighthouse watcher who gave up her university dreams to stay and protect her niece Bc.", 
+                bio_zh: "Ba1 的双胞胎妹妹。性格温和的灯塔守望者，为信守照顾侄女 Bc 的承诺，撕毁了大学录取通知书永远留在岛上。" },
+            "f": { x: 88.5, y: 112, bp: "outside", by: "1926", dy: "1980", 
+                bio_en: "Husband of Ba2. A silent, kind fisherman representing the island's pure old days. Passed away in a shipwreck.", 
+                bio_zh: "Ba2 的丈夫。沉默善良的渔民，代表岛上淳朴旧时光，最终死于海难。" },
+            "E": { x: 313.5, y: 115, bp: "outside", by: "1928", dy: "2020", 
+                bio_en: "The Perfume Queen and cD's second wife. Pushed the island towards industrialization. Resented the islanders and died seeking to erase her ties to the island.", 
+                bio_zh: "cD 的第二任妻子，香水女王。工业化幕后推手，一生看不起岛民，死后灵魂化作执念试图烧毁自己的肖像。" },
+            "g": { x: 63.5, y: 148, bp: "outside", by: "1940", dy: "1998", 
+                bio_en: "A war photographer who sought peace on the island in 1968. Recorded the island's dark history through his lens before his suspicious death.", 
+                bio_zh: "战地摄影师，因厌战上岛。用照片和“月光显影术”记录了岛屿被遗忘的历史，死因可疑。" },
+            "Bc": { x: 213.5, y: 153, bp: "orange_island", by: "1944", dy: "1980", 
+                bio_en: "Born with albinism. The 'first curse' of the families' marriage. Her illness indirectly caused the dark era of the nocturnal society.", 
+                bio_zh: "先天性白化病患者。虽受尽溺爱却一直觉得自己不幸，她的病情促使了“昼伏夜出”习俗的形成。" },
+            "Bf": { x: 113.5, y: 167, bp: "orange_island", by: "1949", dy: "2025", 
+                bio_en: "Daughter of Ba2 and f. A resilient woman who acts as a bridge between generations. Provided the Player with the protective 'Block'.", 
+                bio_zh: "Ba2 与 f 的女儿。坚韧的斗士，连接两代人的桥梁，教会了主角如何利用掩体（Block）保护自己。" },
+            "cE": { x: 288.5, y: 185, bp: "orange_island", by: "1955", dy: "2026", 
+                bio_en: "The third Island Chief and factory boss. An elitist who maintained oppressive rule. Died in the 2026 massive explosion and became a lingering boss spirit.", 
+                bio_zh: "第三任岛长。精英主义者，建立鲎工厂残酷抽血维持高压统治。死于2026大爆炸，死后化为执念继续向水塔投毒。" },
+            "i": { x: 138.5, y: 210, bp: "outside", by: "1965", dy: "2017", 
+                bio_en: "A marine biologist with a strong sense of justice. Assassinated and disguised as an accident after discovering the cruel truth of the HorseCrab factory.", 
+                bio_zh: "热爱大海、充满正义感的海洋学家。发现了鲎工厂虐杀鲎的真相后，被暗杀并伪装成意外。" },
+            "ProudGrandpaM": { x: 338.5, y: 198, bp: "outside", by: "1960", dy: "2023", 
+                bio_en: "A hardworking grandpa who took pride in the factory. Wished to deliver a custom pen to his granddaughter for getting into college.", 
+                bio_zh: "在岛上奋斗一辈子的外公。坚信工厂带来了好日子，遗愿是把定制钢笔送给考上大学的孙女。" },
+            "GroceryFounderF": { x: 813.5, y: 227, bp: "outside", by: "1973", dy: "2025", 
+                bio_en: "The founder of the grocery store. Kept a secret ledger of islanders' debts, wishing to show her strict son the true meaning of community support.", 
+                bio_zh: "杂货店创始人老太太。见证了岛民的窘迫，遗愿是让立下“概不赊账”规矩的儿子体会岛民彼此的情谊。" },
+            "HotelFounderM": { x: 464.5, y: 135, bp: "outside", by: "1935", dy: "2010", 
+                bio_en: "Founder of the hotel. Regretted his strict 'eldest son must not leave' rule and wished to encourage his grandson to pursue architectural dreams off-island.", 
+                bio_zh: "旅馆创始人。建起岛上最高的三层楼，死后决定亲手砸碎“长子不得离岛”的家训，鼓励孙子去外面的世界。" },
+            "LibraryFounderM": { x: 775.5, y: 177, bp: "outside", by: "1958", dy: "2025", 
+                bio_en: "The old bookstore librarian. Maintained traditional reading rules to break echo chambers, warning against cold classification algorithms.", 
+                bio_zh: "书店老馆长。坚守传统的借阅规矩，试图用书籍打破信息茧房，警告新管理员不要被冰冷的算法控制。" },
+            "MrMailMoneyM": { x: 663.5, y: 200, bp: "outside", by: "1961", dy: "2026", 
+                bio_en: "A migrant worker who endured the nocturnal shifts his whole life. His last wish was to send his lifelong secret savings back to his family.", 
+                bio_zh: "底层异乡劳工。忍受违背生理节律的“强制黑夜”，遗愿是把藏了一辈子的“梦想基金”存折寄给家人。" },
+            "PowerStationMomofEngineerF": { x: 713.5, y: 178, bp: "outside", by: "1953", dy: "2015", 
+                bio_en: "Mother of the power station engineer. Lingered to watch her son's colleagues celebrate his birthday.", 
+                bio_zh: "电站工程师的母亲。灵魂久久未散，只为默默看着同事们给仍在世的儿子庆祝生日。" },
+            "OrchardSoldierM": { x: 539.5, y: 90, bp: "outside", by: "1918", dy: "2008", 
+                bio_en: "A WWII veteran who found peace in the island's night shifts in 1945. Returned to encourage his depressed great-grandson to survive this harsh era.", 
+                bio_zh: "饱受二战创伤折磨的老兵。在橘子岛的黑夜中找到了救赎，跨越时空鼓舞深陷教育贷款绝望中的曾孙。" },
+            "BartenderM": { x: 454.5, y: 260, bp: "outside", by: "1985", dy: "2023", 
+                bio_en: "A passionate bartender suffering from XP disease (sunlight allergy). Wished his healthy wife would leave the dark island and embrace the sun again.", 
+                bio_zh: "患有着色性干皮病的调酒师。用死亡为健康的妻子松绑，鼓励她重新拥抱白昼、离开这座避光的岛。" },
+            "OldTeacherF": { x: 613.5, y: 167, bp: "outside", by: "1950", dy: "2024", 
+                bio_en: "A strict old teacher who always wanted to maintain discipline. Was given the Camera tool to finally 'stop' time.", 
+                bio_zh: "一生想要维持纪律的老教师。主角将能够定格瞬间的相机（Magic Flash）留给了她。" },
+            "FounderGrandmaF": { x: 738.5, y: 107, bp: "outside", by: "1925", dy: "2015", 
+                bio_en: "The Spice Queen. Wished to wake up her granddaughter, who was alienated by extreme plastic surgery and wealth, to face her true self.", 
+                bio_zh: "粗加工香料帝国初代女家主。唤醒被阶层异化的孙女，让她想起儿时要当“野生植物猎人”的真实梦想。" },
+            "ClinicAngelDaughterF": { x: 613.5, y: 307, bp: "outside", by: "2005", dy: "2015", 
+                bio_en: "A daughter who passed away too soon off-island, returning to guide her father's soul and bid farewell to her mother.", 
+                bio_zh: "在岛外早逝的女儿，灵魂回到岛上接引父亲，并向诊所里的母亲作最后的告别。" },
+            "OrangeChiefAngelFather": { x: 588.5, y: 234, bp: "outside", by: "1976", dy: "2026", 
+                bio_en: "A father whose soul lingered, waiting to be taken by his angel daughter.", 
+                bio_zh: "一位深爱家人的父亲，离世后灵魂在岛上徘徊，直到早逝的女儿来接引他。" },
+            "LikeVampireM": { x: 425.5, y: 212, bp: "outside", by: "1966", dy: "2026", 
+                bio_en: "A porphyria patient who feared sunlight like a vampire. Desired to hand his hidden will to his lawyer.", 
+                bio_zh: "患卟啉症、极度畏光的岛民（像吸血鬼）。遗愿是把遗嘱拿出来交给自己的律师。" },
+            "ExPoliceChiefM": { x: 562.5, y: 193, bp: "outside", by: "1958", dy: "2026", 
+                bio_en: "The old police chief who hid evidence of murder to protect the island's economy. Handed the crucial evidence to his successor to finally deliver justice.", 
+                bio_zh: "老治安官。当年为保住岛屿资金链隐瞒了命案真相，遗愿是交出致命证物，完成迟来的正义接力。" },
+            "OrchardGardenerM": { x: 688.5, y: 57, bp: "outside", by: "1905", dy: "1982", 
+                bio_en: "A reformed thief who became a master grafter. His journey through the orchard reconciles his past shame and honors.", 
+                bio_zh: "曾入狱的青年园艺师。在岛上通过大规模嫁接“月白橙”找回尊严，最终与世俗的荣辱彻底和解。" },
+            "PierDogOwnerM": { x: 688.5, y: 243, bp: "outside", by: "1978", dy: "2022", 
+                bio_en: "A pier worker whose only regret was losing his beloved dog. The player brings the Yarnball to reunite them.", 
+                bio_zh: "码头工人。唯一的遗愿是找到自己死去的狗狗灵魂。" },
+            "ScientistFuranocoumarinM": { x: 613.5, y: 103, bp: "outside", by: "1922", dy: "2023", 
+                bio_en: "The chemist who discovered and purified Furanocoumarin. Devoted his life to exposing its toxicity, returning to report the island's abuse of it.", 
+                bio_zh: "发现并提纯呋喃香豆素的化学家。一生在学术界呼吁其毒性，死后致力于举报橘子岛对其的滥用。" },
+            "OrchardIrrigatorM": { x: 438.5, y: 84, bp: "outside", by: "1915", dy: "1963", 
+                bio_en: "The island's first trapped soul. Built the irrigation system and drowned accidentally. Just wanted to walk the water channels one last time.", 
+                bio_zh: "搭建了最早灌溉系统的工程师。意外淹死成为岛上“第一个灵魂”，只愿再看一眼自己照料的水渠并与尸骨告别。" }
         };
 
-        // 3. 全局状态
-        let currentLang = 'en'; // 默认英语
+        let currentLang = 'en'; 
         let currentActiveChar = null;
 
         // 获取 DOM 元素
-        const langButtons = document.querySelectorAll('.lang-btn');
-        const hotspots = document.querySelectorAll('.avatar-hotspot');
+        const treeContainer = document.getElementById('tree-container');
         const placeholder = document.getElementById('placeholder-text');
         const infoPanel = document.getElementById('info-panel');
         const portrait = document.getElementById('char-portrait');
         
-        const selBirth = document.getElementById('select-birth');
-        const selDeath = document.getElementById('select-death');
-        const selCause = document.getElementById('select-cause');
+        const selBp = document.getElementById('select-birthplace');
+        const selBy = document.getElementById('select-birthyear');
+        const selDy = document.getElementById('select-deathyear');
         const bioSection = document.getElementById('bio-section');
+        const langButtons = document.querySelectorAll('.lang-btn');
 
-        // 4. 语言切换核心逻辑
+        // 3. 动态计算精确像素并生成所有热区
+        // 底图尺寸 850x400
+        for (const [id, data] of Object.entries(charDatabase)) {
+            const spot = document.createElement('div');
+            spot.className = 'avatar-hotspot';
+            spot.setAttribute('data-id', id);
+            // 计算基于精确像素的百分比，适配不同屏幕
+            spot.style.left = `${(data.x / 850) * 100}%`;
+            spot.style.top = `${(data.y / 400) * 100}%`;
+            
+            spot.addEventListener('click', function() {
+                // 处理选中状态的视觉反馈
+                document.querySelectorAll('.avatar-hotspot').forEach(s => s.classList.remove('active-spot'));
+                this.classList.add('active-spot');
+
+                currentActiveChar = data;
+
+                placeholder.style.display = 'none';
+                infoPanel.style.display = 'flex';
+                bioSection.style.display = 'none'; 
+
+                // --- 2 倍无损放大与居中算法 ---
+                // 因为目标是 100x100 容器 (中心在 50,50)，放大两倍后的实际像素坐标直接是 2 * 原坐标
+                const bgPosX = 50 - (2 * data.x);
+                const bgPosY = 50 - (2 * data.y);
+                portrait.style.backgroundPosition = `${bgPosX}px ${bgPosY}px`;
+
+                selBp.value = "";
+                selBy.value = "";
+                selDy.value = "";
+            });
+            treeContainer.appendChild(spot);
+        }
+
+        // 4. 提取唯一的出生年份和死亡年份用于生成下拉框
+        const uniqueBirthYears = [...new Set(Object.values(charDatabase).map(c => c.by))].sort();
+        const uniqueDeathYears = [...new Set(Object.values(charDatabase).map(c => c.dy))].sort();
+
+        // 5. 语言切换核心逻辑
         function applyLanguage(lang) {
             currentLang = lang;
             const textData = i18n[lang];
@@ -473,32 +553,39 @@
             // 更新静态文本
             placeholder.innerHTML = textData.prompt;
             document.getElementById('ui-puzzle-title').textContent = textData.puzzleTitle;
-            document.getElementById('ui-label-birth').textContent = textData.birthLabel;
-            document.getElementById('ui-label-death').textContent = textData.deathLabel;
-            document.getElementById('ui-label-cause').textContent = textData.causeLabel;
+            document.getElementById('ui-label-birthplace').textContent = textData.bpLabel;
+            document.getElementById('ui-label-birthyear').textContent = textData.byLabel;
+            document.getElementById('ui-label-deathyear').textContent = textData.dyLabel;
 
-            // 更新下拉框的文本（但保持底层 value 不变，这样切换语言时不会丢失玩家的选项进度）
-            updateSelectOptions(selBirth, textData.birthOptions);
-            updateSelectOptions(selDeath, textData.deathOptions);
-            updateSelectOptions(selCause, textData.causeOptions);
+            // 记录当前的 value 以防重置
+            const currBp = selBp.value;
+            const currBy = selBy.value;
+            const currDy = selDy.value;
 
-            // 如果当前已经解锁了生平，也要立刻刷新其语言
+            // 重新生成地点选项
+            selBp.innerHTML = `<option value="">${textData.selectDefault}</option>
+                               <option value="orange_island">${textData.places["orange_island"]}</option>
+                               <option value="outside">${textData.places["outside"]}</option>`;
+            
+            // 生成年份选项
+            selBy.innerHTML = `<option value="">${textData.selectDefault}</option>` + 
+                              uniqueBirthYears.map(y => `<option value="${y}">${y}</option>`).join('');
+            
+            selDy.innerHTML = `<option value="">${textData.selectDefault}</option>` + 
+                              uniqueDeathYears.map(y => `<option value="${y}">${y}</option>`).join('');
+
+            // 恢复玩家的选项
+            selBp.value = currBp;
+            selBy.value = currBy;
+            selDy.value = currDy;
+
+            // 如果当前已经解锁了生平，立刻刷新其语言
             if (currentActiveChar && bioSection.style.display === 'block') {
                 const bioText = lang === 'en' ? currentActiveChar.bio_en : currentActiveChar.bio_zh;
                 bioSection.innerHTML = textData.bioPrefix + bioText;
             }
         }
 
-        // 辅助函数：只更新选项文字，不破坏底层 Value
-        function updateSelectOptions(selectElement, textArray) {
-            Array.from(selectElement.options).forEach((opt, index) => {
-                if(textArray[index]) {
-                    opt.textContent = textArray[index];
-                }
-            });
-        }
-
-        // 绑定语言切换按钮事件
         langButtons.forEach(btn => {
             btn.addEventListener('click', function() {
                 langButtons.forEach(b => b.classList.remove('active'));
@@ -507,43 +594,15 @@
             });
         });
 
-        // 5. 家族树头像点击逻辑
-        hotspots.forEach(spot => {
-            spot.addEventListener('click', function() {
-                const charId = this.getAttribute('data-id');
-                const data = charDatabase[charId];
-                if(!data) return;
-
-                currentActiveChar = data;
-
-                placeholder.style.display = 'none';
-                infoPanel.style.display = 'flex';
-                bioSection.style.display = 'none'; 
-
-                const pctX = parseFloat(data.posX) / 100;
-                const pctY = parseFloat(data.posY) / 100;
-                const scaledCenterX = 1700 * pctX;
-                const scaledCenterY = 800 * pctY;
-                const bgPosX = 50 - scaledCenterX;
-                const bgPosY = 50 - scaledCenterY;
-                
-                portrait.style.backgroundPosition = `${bgPosX}px ${bgPosY}px`;
-
-                selBirth.value = "";
-                selDeath.value = "";
-                selCause.value = "";
-            });
-        });
-
         // 6. 解谜校验逻辑
         function checkPuzzle() {
             if(!currentActiveChar) return;
 
-            const bMatch = selBirth.value === currentActiveChar.correctBirth;
-            const dMatch = selDeath.value === currentActiveChar.correctDeath;
-            const cMatch = selCause.value === currentActiveChar.correctCause;
+            const bpMatch = selBp.value === currentActiveChar.bp;
+            const byMatch = selBy.value === currentActiveChar.by;
+            const dyMatch = selDy.value === currentActiveChar.dy;
 
-            if(bMatch && dMatch && cMatch) {
+            if(bpMatch && byMatch && dyMatch) {
                 const bioText = currentLang === 'en' ? currentActiveChar.bio_en : currentActiveChar.bio_zh;
                 bioSection.innerHTML = i18n[currentLang].bioPrefix + bioText;
                 bioSection.style.display = 'block';
@@ -552,11 +611,11 @@
             }
         }
 
-        selBirth.addEventListener('change', checkPuzzle);
-        selDeath.addEventListener('change', checkPuzzle);
-        selCause.addEventListener('change', checkPuzzle);
+        selBp.addEventListener('change', checkPuzzle);
+        selBy.addEventListener('change', checkPuzzle);
+        selDy.addEventListener('change', checkPuzzle);
 
-        // 7. 页面加载完毕后，自动初始化为英文
+        // 初始化
         applyLanguage('en');
 
     </script>
