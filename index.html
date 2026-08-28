@@ -59,7 +59,7 @@
         .lang-btn {
             background: none;
             border: none;
-            color: #666;
+            color: #f3eed5;
             font-size: 14px;
             cursor: pointer;
             transition: all 0.3s ease;
@@ -117,6 +117,11 @@
             z-index: 10;
         }
 
+        /* 已解锁过生平的热区，留一点暗金色余晖 */
+        .avatar-hotspot.solved-spot {
+            border: 2px solid rgba(211, 84, 0, 0.45);
+        }
+
         /* =========================
            Character Information (下半部分)
            ========================= */
@@ -152,6 +157,7 @@
             flex-direction: column;
             align-items: center;
             min-width: 120px;
+            gap: 12px;
         }
 
         #char-portrait {
@@ -165,8 +171,17 @@
             box-shadow: 0 4px 15px rgba(0,0,0,0.6);
         }
 
+        #char-relation {
+            width: 120px;
+            text-align: center;
+            font-size: 12px;
+            color: #777;
+            line-height: 1.5;
+        }
+
         .info-right {
             flex-grow: 1;
+            min-width: 0;
             display: flex;
             flex-direction: column;
             gap: 20px;
@@ -220,14 +235,67 @@
 
         #bio-section {
             display: none; 
-            background: rgba(211, 84, 0, 0.1);
-            padding: 20px;
+            background: rgba(211, 84, 0, 0.08);
+            padding: 24px 26px;
             border-left: 4px solid #d35400;
             border-radius: 4px;
             color: #ddd;
-            line-height: 1.8;
+            line-height: 1.85;
             font-size: 15px;
             animation: fadeIn 0.8s ease forwards;
+            max-height: 460px;
+            overflow-y: auto;
+        }
+
+        /* 生平区滚动条，配合暗色主题 */
+        #bio-section::-webkit-scrollbar { width: 8px; }
+        #bio-section::-webkit-scrollbar-track { background: rgba(0,0,0,0.3); border-radius: 4px; }
+        #bio-section::-webkit-scrollbar-thumb { background: #4a2a12; border-radius: 4px; }
+        #bio-section::-webkit-scrollbar-thumb:hover { background: #d35400; }
+
+        .bio-unlock-label {
+            display: block;
+            color: #d35400;
+            font-size: 12px;
+            letter-spacing: 2px;
+            text-transform: uppercase;
+            margin-bottom: 6px;
+        }
+
+        .bio-name {
+            display: block;
+            color: #f0f0f0;
+            font-size: 20px;
+            font-weight: bold;
+            margin-bottom: 4px;
+        }
+
+        .bio-meta {
+            display: block;
+            color: #888;
+            font-size: 13px;
+            margin-bottom: 16px;
+        }
+
+        .bio-summary {
+            color: #c9c9c9;
+            font-style: italic;
+            padding-bottom: 14px;
+            margin-bottom: 14px;
+            border-bottom: 1px solid rgba(211, 84, 0, 0.25);
+        }
+
+        .bio-entry {
+            margin: 0 0 12px 0;
+        }
+
+        .bio-entry:last-child {
+            margin-bottom: 0;
+        }
+
+        .bio-entry strong {
+            color: #e8944e;
+            font-weight: 600;
         }
 
         @keyframes fadeIn {
@@ -313,6 +381,7 @@
         <div id="info-panel">
             <div class="info-left">
                 <div id="char-portrait"></div>
+                <div id="char-relation"></div>
             </div>
 
             <div class="info-right">
@@ -372,7 +441,8 @@
                 dyLabel: "Death Year:",
                 selectDefault: "-- Select --",
                 places: { "orange_island": "Orange Island", "outside": "Outside Island" },
-                bioPrefix: "<strong>Unlocked Memory:</strong><br><br>"
+                unlockLabel: "Unlocked Memory",
+                lifespan: function (by, dy) { return by + " – " + dy; }
             },
             zh: {
                 prompt: "请点击上方家族树中的人物头像。",
@@ -382,124 +452,536 @@
                 dyLabel: "死亡年份 (Death Year):",
                 selectDefault: "-- 选择 --",
                 places: { "orange_island": "橘子岛", "outside": "岛外" },
-                bioPrefix: "<strong>解锁生平：</strong><br><br>"
+                unlockLabel: "解锁生平",
+                lifespan: function (by, dy) { return by + " 年 – " + dy + " 年"; }
             }
         };
 
-       // 2. 游戏数据库 (极简化生平，含 34 个角色精确像素坐标)
+        // 2. 游戏数据库（34 个角色：精确像素坐标 + 解谜答案 + 双语生平）
         const charDatabase = {
-            "Player": { x: 199.5, y: 350, bp: "orange_island", by: "2022", dy: "2026", 
-                bio_en: "The protagonist.", 
-                bio_zh: "主角。" },
-            "Guide": { x: 137.5, y: 277, bp: "orange_island", by: "1993", dy: "2022", 
-                bio_en: "Mother of the Player. Passed away giving birth.", 
-                bio_zh: "主角母亲 Bi1。因难产去世。" },
-            "a": { x: 137.5, y: 46, bp: "outside", by: "1899", dy: "1956", 
-                bio_en: "Great-great-great-grandfather of the Player. The first generation of islanders and fisherman. Named the island.", 
-                bio_zh: "主角的曾曾曾外祖父。和妻子一起定居这个小岛，最早的岛民，以捕鱼为生，称呼小岛为“鱼热爱的地方”。" },
-            "B": { x: 187.5, y: 47, bp: "outside", by: "1901", dy: "1956", 
-                bio_en: "Great-great-great-grandmother of the Player. Wife of 'a', one of the earliest settlers. Invented the Sea-Thorn supplement.", 
-                bio_zh: "主角的曾曾曾外祖母。和丈夫一起定居这个小岛，最早的岛民。并发明了处理酸涩的海棘果为维生素补充剂的方法。" },
-            "c": { x: 238.5, y: 43, bp: "outside", by: "1898", dy: "1960", 
-                bio_en: "Great-great-grandfather of the Player. Second batch of settlers. Grafted the iconic 'Moon-white Orange'.", 
-                bio_zh: "主角的曾曾祖父。和妻子儿子一起定居到岛上，是岛上的第二家居民。带来皇家酸橙并意外嫁接出“月白橙”，奠定了全岛的橙子产业基础。" },
-            "D": { x: 288.5, y: 50, bp: "outside", by: "1902", dy: "1963", 
-                bio_en: "Great-great-grandmother of the Player. Wife of 'c', co-founder of the island's earliest agricultural prosperity.", 
-                bio_zh: "主角的曾曾祖母。和丈夫儿子一起定居到岛上，是岛上的第二家居民。带来皇家酸橙并意外嫁接出“月白橙”，奠定了全岛的橙子产业基础。" },
-            "Ba1": { x: 187.5, y: 104, bp: "orange_island", by: "1924", dy: "1944", 
-                bio_en: "Great-great-great-aunt of the Player. Daughter of the fisherman family, first wife of cD. Died giving birth to the albino daughter.", 
-                bio_zh: "主角的曾曾外姨祖母。岛上第一家居民——渔民家的女儿，和双胞胎姐妹是最早在岛上出生的孩子。和种橘子家的儿子结婚，生下患白化病的女儿时难产去世。这场悲剧也是导致两家决裂的导火索。" },
-            "cD": { x: 263.5, y: 105, bp: "outside", by: "1924", dy: "1985", 
-                bio_en: "Great-grandfather of the Player. The second Island Chief. Established the 'nocturnal society' to protect his albino daughter.", 
-                bio_zh: "主角的曾祖父，也是主角的曾曾外姨祖母的丈夫。在岛外出生，和父母一起移居岛上，将父母嫁接出来的月白橙做成了产业，成为第一任岛长。和渔民的女儿结婚，为保护患白化病的女儿建立“夜间社会”规则和“圣水仪式”。" },
-            "Ba2": { x: 137.5, y: 104, bp: "orange_island", by: "1924", dy: "1995", 
-                bio_en: "Great-great-grandmother of the Player. Twin sister of Ba1. Gave up university to protect her albino niece.", 
-                bio_zh: "主角的曾曾外祖母。岛上第一家居民——渔民家的女儿，和双胞胎姐妹是最早在岛上出生的孩子。为照顾难产去世的双胞胎姐妹的白化病女儿，撕毁了大学录取通知书永远留在岛上。" },
-            "f": { x: 87.5, y: 112, bp: "outside", by: "1926", dy: "1980", 
-                bio_en: "Great-great-grandfather of the Player. A fisherman, Passed away in a shipwreck.", 
-                bio_zh: "主角的曾曾外祖父。渔夫，最终死于海难。" },
-            "E": { x: 312.5, y: 115, bp: "outside", by: "1928", dy: "2020", 
-                bio_en: "Great-grandmother of the Player. The Perfume Queen and cD's second wife. Pushed the island towards industrialization.", 
-                bio_zh: "主角的曾祖母。出生于岛外的精英家庭的叛逆女儿，第一任岛长的第二任妻子，香水女王。" },
-            "g": { x: 62.5, y: 148, bp: "outside", by: "1940", dy: "1998", 
-                bio_en: "Great-grandfather of the Player. A war photographer who sought peace on the island in 1968. Died suspiciously.", 
-                bio_zh: "主角的曾外祖父。战地摄影师，因厌战上岛。用照片和“月光显影术”记录了岛屿被遗忘的历史，死因可疑。" },
-            "Bc": { x: 212.5, y: 153, bp: "orange_island", by: "1944", dy: "1980", 
-                bio_en: "Great-aunt of the Player. Born with albinism. Her illness indirectly caused the dark era of the nocturnal society.", 
-                bio_zh: "主角的曾祖父和曾曾外姨祖母的女儿。先天性白化病患者。虽受尽溺爱却一直觉得自己不幸，她的病情促使了“昼伏夜出”习俗的形成。" },
-            "Bf": { x: 112.5, y: 167, bp: "orange_island", by: "1949", dy: "2025", 
-                bio_en: "Great-grandmother of the Player.", 
-                bio_zh: "主角的曾外婆。" },
-            "cE": { x: 287.5, y: 185, bp: "orange_island", by: "1955", dy: "2026", 
-                bio_en: "Grandfather of the Player. The third Island Chief and factory boss. Died in the 2026 massive explosion.", 
-                bio_zh: "主角的爷爷。第二任岛长。转向高利润的呋喃香豆素生产和鲎血采集。死于2026橘子工厂大爆炸。" },
-            "i": { x: 137.5, y: 210, bp: "outside", by: "1965", dy: "2017", 
-                bio_en: "Grandfather of the Player. A marine biologist with a strong sense of justice. Assassinated after discovering the truth.", 
-                bio_zh: "主角的外祖父。热爱大海、充满正义感的海洋学家。发现了鲎工厂虐杀鲎的真相后，被暗杀并伪装成意外。" },
-            "ProudGrandpaM": { x: 337.5, y: 198, bp: "outside", by: "1960", dy: "2023", 
-                bio_en: "Pround grandpa.", 
-                bio_zh: "为孙女骄傲的外公。" },
-            "GroceryFounderF": { x: 812.5, y: 227, bp: "outside", by: "1973", dy: "2025", 
-                bio_en: "Grocer.", 
-                bio_zh: "杂货铺老板。" },
-            "HotelFounderM": { x: 463.5, y: 135, bp: "outside", by: "1935", dy: "2010", 
-                bio_en: "Hotel Founder.", 
-                bio_zh: "旅馆创始人。" },
-            "LibraryFounderM": { x: 774.5, y: 177, bp: "outside", by: "1958", dy: "2025", 
-                bio_en: "Library Founder.", 
-                bio_zh: "图书馆建立者。" },
-            "MrMailMoneyM": { x: 662.5, y: 200, bp: "outside", by: "1961", dy: "2026", 
-                bio_en: "The One Who Sent His Wages Home.", 
-                bio_zh: "工资全寄回老家的人。" },
-            "PowerStationMomofEngineerF": { x: 712.5, y: 178, bp: "outside", by: "1953", dy: "2015", 
-                bio_en: "Mother of the power station engineer.", 
-                bio_zh: "电站工程师的妈妈。" },
-            "OrchardSoldierM": { x: 538.5, y: 90, bp: "outside", by: "1918", dy: "2008", 
-                bio_en: "World War II Veteran.", 
-                bio_zh: "二战退伍老兵。" },
-            "BartenderM": { x: 453.5, y: 260, bp: "outside", by: "1985", dy: "2023", 
-                bio_en: "Moonlight Bartender.", 
-                bio_zh: "月光调酒师。" },
-            "OldTeacherF": { x: 612.5, y: 167, bp: "outside", by: "1950", dy: "2024", 
-                bio_en: "Schoolmaster.", 
-                bio_zh: "教书先生。" },
-            "FounderGrandmaF": { x: 737.5, y: 107, bp: "outside", by: "1925", dy: "2015", 
-                bio_en: "Botanical Lady.", 
-                bio_zh: "香料女王。" },
-            "ClinicAngelDaughterF": { x: 612.5, y: 307, bp: "outside", by: "2005", dy: "2015", 
-                bio_en: "A daughter who passed away too soon.", 
-                bio_zh: "早逝的女儿。" },
-            "OrangeChiefAngelFather": { x: 587.5, y: 234, bp: "outside", by: "1976", dy: "2026", 
-                bio_en: "Father of A daughter who passed away too soon.", 
-                bio_zh: "早逝女儿的父亲。" },
-            "LikeVampireM": { x: 424.5, y: 212, bp: "outside", by: "1966", dy: "2026", 
-                bio_en: "The One Called a Vampire.", 
-                bio_zh: "被称作吸血鬼的人。" },
-            "ExPoliceChiefM": { x: 561.5, y: 193, bp: "outside", by: "1958", dy: "2026", 
-                bio_en: "First Sheriff", 
-                bio_zh: "第一任治安官。" },
-            "OrchardGardenerM": { x: 687.5, y: 57, bp: "outside", by: "1905", dy: "1982", 
-                bio_en: "Master Grafter.", 
-                bio_zh: "嫁接大师。" },
-            "PierDogOwnerM": { x: 687.5, y: 243, bp: "outside", by: "1978", dy: "2022", 
-                bio_en: "Dockworker.", 
-                bio_zh: "码头工人。" },
-            "ScientistFuranocoumarinM": { x: 612.5, y: 103, bp: "outside", by: "1922", dy: "2023", 
-                bio_en: "Discoverer of Furanocoumarin.", 
-                bio_zh: "呋喃香豆素发现者。" },
-            "OrchardIrrigatorM": { x: 437.5, y: 84, bp: "outside", by: "1915", dy: "1963", 
-                bio_en: "The One Who Nourished the Orange Grove.", 
-                bio_zh: "滋养橘园的人。" }
+                "Player": {
+                        "x": 199.5,
+                        "y": 350,
+                        "bp": "orange_island",
+                        "by": "2022",
+                        "dy": "2026",
+                        "name_en": "The Player",
+                        "name_zh": "主角",
+                        "rel_en": "The Player",
+                        "rel_zh": "玩家本人",
+                        "sum_en": "Born on Orange Island, she lost her mother the day she was born. In 2026 she fell ill and her soul slipped loose.",
+                        "sum_zh": "出生在橘子岛，出生当天失去母亲。2026 年突发疾病昏迷，灵魂离体，踏上拯救先祖灵魂的旅程。",
+                        "bio_en": "<p class='bio-entry'><strong>May 10, 2022</strong> — I was born on Orange Island. My father is the island's police officer and firefighter. My mother died giving birth to me.</p><p class='bio-entry'>The places I know best are my house, my grandmother's house, the Safety Center where my father works, and the school — though I only got one year of it.</p><p class='bio-entry'><strong>May 17, 2026</strong> — I fell suddenly ill, lost consciousness, and was taken to the hospital.</p><p class='bio-entry'><strong>June 14, 2026</strong> — My heart stopped. I was buried beside my mother.</p>",
+                        "bio_zh": "<p class='bio-entry'><strong>2022年5月10日</strong> — 我出生在橘子岛。我的父亲是岛上的警察兼消防员，母亲在生我的时候难产去世了。</p><p class='bio-entry'>岛上我最熟悉的地方是我的家、外婆家、爸爸的工作单位综合中心，还有学校——虽然我只上了一年学。</p><p class='bio-entry'><strong>2026年5月17日</strong> — 我突发疾病昏迷，被送进了医院。</p><p class='bio-entry'><strong>2026年6月14日</strong> — 我的心脏停止了跳动。我被葬在妈妈的墓旁。</p>"
+                },
+                "Guide": {
+                        "x": 137.5,
+                        "y": 277,
+                        "bp": "orange_island",
+                        "by": "1993",
+                        "dy": "2022",
+                        "name_en": "Mother",
+                        "name_zh": "母亲",
+                        "rel_en": "Mother",
+                        "rel_zh": "母亲",
+                        "sum_en": "Daughter of the marine scientist. She married the Island Mayor's son and died giving birth to the Player.",
+                        "sum_zh": "海洋学家的女儿，与岛长的儿子结婚。生下主角当天难产去世。",
+                        "bio_en": "<p class='bio-entry'><strong>Christmas Eve, December 24, 1993</strong> — My twin sister and I were born on Orange Island. Our father was a marine scientist; our mother was born on the island. Father worked nights and slept days; Mother worked days and slept nights; I slept at night and played on the beach all day. Dawn and dusk were the hours our father taught us at home.</p><p class='bio-entry'>As a child I had a secret playmate: the Island Mayor's son. We could both tell from the way the grown-ups talked that our friendship would never be approved of, but nobody would tell us what had actually happened, and neither of us dared to ask. He left Orange Island in 2008. I did not know if he would ever come back.</p><p class='bio-entry'><strong>2017</strong> — My father was murdered and it was staged as a drowning. My mother, my sister and I were frightened, but we believed Orange Island would protect us, so we stayed. We buried him in the cemetery.</p><p class='bio-entry'><strong>2018</strong> — My secret playmate came back. <strong>2021</strong> — We were married.</p><p class='bio-entry'><strong>May 10, 2022</strong> — I gave birth to our daughter. I died in childbirth the same day.</p>",
+                        "bio_zh": "<p class='bio-entry'><strong>1993年12月24日的圣诞前夜</strong> — 我和双胞胎妹妹出生在橘子岛。我的父亲是一名海洋学家，母亲是岛上出生的居民。爸爸晚上工作白天睡觉，妈妈白天工作晚上睡觉，我晚上睡觉、白天在沙滩玩，而凌晨和傍晚，是爸爸在家给我们上课的时间。</p><p class='bio-entry'>童年的我有一个秘密的玩伴，是岛长的儿子。我们都从大人的对话中感受到，我们的友谊不会被家长赞同，但是没人告诉我们究竟发生过什么，我们也都不敢问。他2008年离开了橘子岛，我不知道他会不会再回来。</p><p class='bio-entry'><strong>2017年</strong> — 父亲被害，现场被伪装成溺水。我和母亲、妹妹很害怕，但是相信橘子岛会保护我们，所以我们留在了岛上，把父亲葬在了墓园。</p><p class='bio-entry'><strong>2018年</strong> — 我的秘密玩伴回来了。<strong>2021年</strong>，我们结了婚。</p><p class='bio-entry'><strong>2022年5月10日</strong> — 我生下了我们的女儿。同一天，我因为难产去世了。</p>"
+                },
+                "a": {
+                        "x": 137.5,
+                        "y": 46,
+                        "bp": "outside",
+                        "by": "1899",
+                        "dy": "1956",
+                        "name_en": "Husband in The First Settler Couple",
+                        "name_zh": "第一对岛民夫妇中的丈夫",
+                        "rel_en": "Great-Great-Great-Grandfather",
+                        "rel_zh": "曾曾曾外公",
+                        "sum_en": "The island's first settler and fisherman. He named the place Fish Island.",
+                        "sum_zh": "岛上第一家居民中的丈夫，以捕鱼为生，把这座无人小岛命名为“渔岛”。",
+                        "bio_en": "<p class='bio-entry'><strong>March 15, 1899</strong> — I was born in Old Sail Town.</p><p class='bio-entry'><strong>1920s</strong> — The fishing around Old Sail Town was dying, so my wife and I went looking for a new living. We ended up on an empty island about sixty kilometers southeast of the mainland. We were the first people to live there. I named it Fish Island. On the slope on the north side grew a whole forest of wild Sea-Thorn. The fruit was sour and rough on the tongue, but my wife learned to dry it into something faintly sweet. We took it with us on the boat, and we never got scurvy again.</p><p class='bio-entry'><strong>September 20, 1924</strong> — My wife gave birth to twin girls on Fish Island.</p><p class='bio-entry'><strong>1927</strong> — A second family moved to the island with a three-year-old son. We helped them build a small house on the north side, and my wife taught them how to dry Sea-Thorn.</p><p class='bio-entry'><strong>1932</strong> — Our neighbors grew an orange that was huge and sweet. They called it the Moon-white Orange. They traded oranges for our fish, and my wife and I went over to help them graft the new branches onto the Sea-Thorn trees.</p><p class='bio-entry'><strong>Late 1930s</strong> — Their orange business kept growing and they hired a lot of outside hands. People started calling the place Orange Island. The two families felt less and less like the same kind of people, and we drifted apart.</p><p class='bio-entry'><strong>December 24, 1943</strong> — My older daughter married their son. We did not agree to it. I heard they did not agree either. The two of them married anyway. Only my younger daughter went to the wedding.</p><p class='bio-entry'><strong>August 27, 1944</strong> — My older daughter died in childbirth. It was the deepest grief of my life. I buried her at the northeast corner of the island. It was the first grave there.</p><p class='bio-entry'><strong>September 20, 1948</strong> — My younger daughter married a young man who had come from Old Sail Town for the picking season. He learned to fish from me, and he became a fisherman again.</p><p class='bio-entry'><strong>August 27, 1949</strong> — My granddaughter was born.</p><p class='bio-entry'><strong>November 2, 1956</strong> — I left this world. They buried me at the northeast corner, not far from my older daughter.</p>",
+                        "bio_zh": "<p class='bio-entry'><strong>1899年3月15日</strong> — 我出生在旧帆镇。</p><p class='bio-entry'><strong>1920年代</strong> — 旧帆镇周围的鱼越来越少，为了寻找新的生计，我和妻子离开了那里，来到距离大陆东南六十公里的一座荒无人烟的小岛。我们是这里的第一代居民，我给这个岛命名为“渔岛”。岛上北面的山坡生长着大片野生海棘果，果实又酸又涩，但妻子学会了把它做成微甜的果干。我们出海时带着它，再也没得过坏血病。</p><p class='bio-entry'><strong>1924年9月20日</strong> — 我和妻子在渔岛生下了一对双胞胎女儿。</p><p class='bio-entry'><strong>1927年</strong> — 岛上搬来了第二户人家，他们带着一个三岁的儿子。我们在小岛北面帮他们盖起了一栋小屋，妻子也教他们怎么做海棘果干。</p><p class='bio-entry'><strong>1932年</strong> — 邻居家种出了巨大甘甜的月白橘。他们用橘子跟我们换海鲜，我和妻子也去帮他们把橘枝嫁接到海棘果树上。</p><p class='bio-entry'><strong>1930年代后期</strong> — 邻居家的月白橘生意越做越大，雇了很多人，渔岛也开始被外人叫作“橘子岛”。我们两家越来越感觉不是同一类人，关系逐渐疏远。</p><p class='bio-entry'><strong>1943年12月24日</strong> — 我的大女儿和邻居家的儿子结了婚。我们不同意这门婚事，据说邻居家也不同意。两个孩子还是执意结了婚，婚礼只有小女儿去参加了。</p><p class='bio-entry'><strong>1944年8月27日</strong> — 大女儿难产去世。我经历了人生中最深的悲痛。我把她葬在小岛的东北角，那是岛上的第一座墓。</p><p class='bio-entry'><strong>1948年9月20日</strong> — 我的小女儿嫁给了一个从旧帆镇来做季节工的年轻人。他跟着我学会了捕鱼，重新做起了渔民。</p><p class='bio-entry'><strong>1949年8月27日</strong> — 我的外孙女出生了。</p><p class='bio-entry'><strong>1956年11月2日</strong> — 我离开了这个世界。我被安葬在小岛东北角，大女儿的墓离我不远。</p>"
+                },
+                "B": {
+                        "x": 187.5,
+                        "y": 47,
+                        "bp": "outside",
+                        "by": "1901",
+                        "dy": "1956",
+                        "name_en": "Wife in The First Settler Couple",
+                        "name_zh": "第一对岛民夫妇中的妻子",
+                        "rel_en": "Great-Great-Great-Grandmother",
+                        "rel_zh": "曾曾曾外婆",
+                        "sum_en": "Wife in the first settler couple. She worked out how to dry Sea-Thorn into food that kept scurvy away.",
+                        "sum_zh": "岛上第一家居民中的妻子。摸索出把酸涩的海棘果做成果干的方法，成为渔民出海防坏血病的口粮。",
+                        "bio_en": "<p class='bio-entry'><strong>June 22, 1901</strong> — I was born in Old Sail Town.</p><p class='bio-entry'><strong>1920s</strong> — My husband and I left Old Sail Town and settled on a small island out at sea. He named it Fish Island. Wild Sea-Thorn covered the slope on the north side. The fruit was sour and scratchy, but I kept experimenting until I could dry it, and that dried fruit became the food that kept scurvy off our boat.</p><p class='bio-entry'><strong>September 20, 1924</strong> — I gave birth to twin girls.</p><p class='bio-entry'><strong>1927</strong> — A new family arrived, three of them. We helped them build their house, and I taught the wife how to dry Sea-Thorn. Later, half by accident, they grew the sweet Moon-white Orange, and dried orange slowly replaced the dried Sea-Thorn we took to sea.</p><p class='bio-entry'>The two families used to be inseparable. We worked side by side and traded fish for oranges. Then their orange business grew, the island turned into Orange Island, and the grown-ups grew apart. There were a lot of hard feelings nobody could fully explain. But my two daughters and their son stayed the closest of friends.</p><p class='bio-entry'><strong>December 24, 1943</strong> — My older daughter married him at the lighthouse, against everything we said. I never stopped worrying about that marriage.</p><p class='bio-entry'><strong>August 27, 1944</strong> — She died in childbirth and left behind a granddaughter born with albinism. My husband and I were destroyed by it, and after that the two families stopped speaking altogether.</p><p class='bio-entry'><strong>1948</strong> — My younger daughter married a young man from Old Sail Town.</p><p class='bio-entry'><strong>1949</strong> — She gave birth to a healthy granddaughter.</p><p class='bio-entry'><strong>December 14, 1956</strong> — A little over a month after my husband died, I followed him. I was buried beside him and my older daughter.</p>",
+                        "bio_zh": "<p class='bio-entry'><strong>1901年6月22日</strong> — 我出生在旧帆镇。</p><p class='bio-entry'><strong>1920年代</strong> — 我和丈夫离开了旧帆镇，来到海上的一座小岛定居。丈夫给它起名叫“渔岛”。岛上北面的山坡生长着大片野生海棘果，果实又酸又涩，我反复摸索，终于把那些酸涩的果子做成了海棘果干，它成了我们出海预防坏血病的重要食物。</p><p class='bio-entry'><strong>1924年9月20日</strong> — 我生下了一对可爱的双胞胎女儿。</p><p class='bio-entry'><strong>1927年</strong> — 岛上来了新邻居一家三口。我们帮他们盖了房子，我也教邻居家的妻子做海棘果干。后来，邻居家阴差阳错种出了甜美的月白橘，月白橘干慢慢取代了我们出海带的海棘果干。</p><p class='bio-entry'>我们两家人曾经亲密无间，经常一起劳作，用海鲜换橘子。随着邻居家橘子生意做大，小岛变成了“橘子岛”，大人们的关系渐渐远了，中间夹杂着很多说不清的恩怨。但我的两个女儿和邻居家的儿子一直是最亲密的朋友。</p><p class='bio-entry'><strong>1943年12月24日</strong> — 大女儿不顾反对，执意和邻居家的儿子在灯塔结了婚。对这桩婚事，我心里始终有挥之不去的隐忧。</p><p class='bio-entry'><strong>1944年8月27日</strong> — 大女儿难产去世，留下了一个患有先天性白化病的外孙女。这让我和丈夫悲痛欲绝，两家大人也彻底不来往了。</p><p class='bio-entry'><strong>1948年</strong> — 小女儿嫁给了一个从旧帆镇来的年轻人。</p><p class='bio-entry'><strong>1949年</strong> — 小女儿生下了健康的外孙女。</p><p class='bio-entry'><strong>1956年12月14日</strong> — 在丈夫去世一个多月后，我也随他而去了。我葬在了丈夫和大女儿的身边。</p>"
+                },
+                "c": {
+                        "x": 238.5,
+                        "y": 43,
+                        "bp": "outside",
+                        "by": "1898",
+                        "dy": "1960",
+                        "name_en": "The Orchard Founder",
+                        "name_zh": "橘园奠基人",
+                        "rel_en": "Great-Great-Grandfather",
+                        "rel_zh": "曾曾爷爷",
+                        "sum_en": "Second family to settle. He grafted a dying Royal Sour Orange onto Sea-Thorn and created the Moon-white Orange.",
+                        "sum_zh": "岛上第二户居民。把奄奄一息的皇家酸橙嫁接到海棘果树桩上，意外得到月白橘，奠定全岛橘子产业。",
+                        "bio_en": "<p class='bio-entry'><strong>November 1898</strong> — I was born in Plains City.</p><p class='bio-entry'><strong>1923</strong> — I married the neighbor's daughter, the girl I had known since we were children.</p><p class='bio-entry'><strong>April 10, 1924</strong> — Our son was born in Plains City.</p><p class='bio-entry'><strong>1927</strong> — My wife and I took our three-year-old son to Fish Island, sixty kilometers southeast of the mainland. A fisherman and his wife were already living there with twin daughters exactly my son's age. With their help we built a house at the western foot of the northeast slope.</p><p class='bio-entry'><strong>Winter 1927</strong> — An ornamental Royal Sour Orange I had brought from home could not take the island climate and was nearly dead. I grafted it onto a native Sea-Thorn stump in the yard.</p><p class='bio-entry'><strong>Spring 1928</strong> — The graft pushed out new shoots. Somehow it had lived.</p><p class='bio-entry'><strong>1932</strong> — A branch on that grafted tree threw a bud sport, and it grew oranges that were pale, enormous, sweet, and full of juice. We called them Moon-white Oranges. Over the next few years, with help from the fishing family and hired hands from off the island, my wife and I and our son grafted Moon-white Orange onto the Sea-Thorn across the whole slope. That was the beginning of the island's orange industry.</p><p class='bio-entry'><strong>Late 1930s</strong> — We had a huge harvest and shipped it to the mainland. People started calling the place Orange Island. Our business kept getting bigger, and our friendship with the fishing family kept getting smaller.</p><p class='bio-entry'><strong>1940s</strong> — As we hired more seasonal pickers, the workers kept complaining that the sun here burned their skin. To protect them, I moved the picking to night and let them sleep through the day.</p><p class='bio-entry'><strong>December 24, 1943</strong> — My son married the fisherman's older daughter. The two families were barely speaking by then, but they went ahead anyway.</p><p class='bio-entry'><strong>August 27, 1944</strong> — My son's wife died in childbirth and left behind a sick granddaughter. That was the end of any relationship between the two houses.</p><p class='bio-entry'><strong>1947</strong> — My granddaughter was diagnosed with severe congenital albinism. She could never be in the sun. To protect her, my son started building a nighttime playground in the yard, and I quietly backed him.</p><p class='bio-entry'><strong>1950</strong> — My son remarried, to the daughter of a family of doctors in Harbor City. She used her education and her connections to build us an orange processing plant.</p><p class='bio-entry'><strong>January 9, 1960</strong> — I died of old age. Near the end my wife asked if I wanted to go back to Plains City. I said no. I love this island. They buried me in the cemetery at the northeast corner.</p>",
+                        "bio_zh": "<p class='bio-entry'><strong>1898年11月</strong> — 我出生在平原市。</p><p class='bio-entry'><strong>1923年</strong> — 我和青梅竹马的邻居家女儿结婚。</p><p class='bio-entry'><strong>1924年4月10日</strong> — 我们的儿子出生在平原市。</p><p class='bio-entry'><strong>1927年</strong> — 我和妻子带着三岁的儿子移居到距离大陆东南六十公里的渔岛。岛上已经有一对渔民夫妻，他们有一对双胞胎女儿，和我儿子同岁。在他们的帮助下，我们在小岛北面山坡的西边山脚下盖了房子。</p><p class='bio-entry'><strong>1927年冬天</strong> — 我从老家带来的一株观赏用的皇家酸橙无法适应小岛气候，奄奄一息。我试着把它嫁接到了院子里的原生海棘果树桩上。</p><p class='bio-entry'><strong>1928年春天</strong> — 嫁接枝长出了新芽，奇迹般地存活了。</p><p class='bio-entry'><strong>1932年</strong> — 院子里的嫁接橙枝发生了芽变，长出了苍白、巨大、甘甜、多汁的橘子，我们叫它月白橘。随后几年，在渔民一家的帮助和岛外招募的帮手下，我和妻子带着儿子把月白橘嫁接到了整片山坡的海棘果上，奠定了岛屿橘子产业的基础。</p><p class='bio-entry'><strong>1930年代后期</strong> — 月白橘大丰收，销售到了大陆，渔岛也被人叫成了“橘子岛”。我们的生意越做越大，但也和渔民一家的关系逐渐疏远了。</p><p class='bio-entry'><strong>1940年代</strong> — 随着雇佣的季节性采摘工人变多，工人们总是抱怨被毒辣的阳光晒伤皮肤。为了保护工人，我决定把采摘工作改到夜间进行，白天睡觉。</p><p class='bio-entry'><strong>1943年12月24日</strong> — 儿子和渔民家的大女儿结了婚。虽然我们两家关系已经很差，但他们还是走到了一起。</p><p class='bio-entry'><strong>1944年8月27日</strong> — 儿媳妇难产去世，留下了一个患病的孙女，两家也因此彻底决裂。</p><p class='bio-entry'><strong>1947年</strong> — 孙女被诊断为严重的先天性白化病，终生不能见阳光。儿子为了保护她，开始在院子里建夜间游乐园，我也默默支持着他。</p><p class='bio-entry'><strong>1950年</strong> — 儿子再婚，娶了海港城医生世家的女儿。儿媳妇用她的学识和人脉帮家里建了橘子加工厂。</p><p class='bio-entry'><strong>1960年1月9日</strong> — 我自然老去，离开了人世。临终前妻子问我想不想回到平原市，我说不，我热爱这座岛。我被安葬在了岛东北角的墓园里。</p>"
+                },
+                "D": {
+                        "x": 288.5,
+                        "y": 50,
+                        "bp": "outside",
+                        "by": "1902",
+                        "dy": "1963",
+                        "name_en": "The Orchard Founder's Wife",
+                        "name_zh": "橘园奠基人之妻",
+                        "rel_en": "Great-Great-Grandmother",
+                        "rel_zh": "曾曾奶奶",
+                        "sum_en": "She planted the slope with her husband and watched the family turn rich, and distant.",
+                        "sum_zh": "和丈夫一起把月白橘种满山坡，也眼看着两家人因生意而生分。",
+                        "bio_en": "<p class='bio-entry'><strong>February 14, 1902</strong> — I was born in Plains City.</p><p class='bio-entry'><strong>1923</strong> — I married the neighbor's son, the boy I had known since we were children.</p><p class='bio-entry'><strong>April 10, 1924</strong> — Our son was born in Plains City.</p><p class='bio-entry'><strong>1927</strong> — My husband and I took our son to Fish Island. The fishing family next door helped us build our house, and the fisherman's wife taught me how to dry Sea-Thorn.</p><p class='bio-entry'><strong>Winter 1927</strong> — My husband grafted a half-dead Royal Sour Orange onto a Sea-Thorn stump. To our surprise, it lived.</p><p class='bio-entry'><strong>1932</strong> — That tree gave us the most delicious oranges I had ever tasted. Our whole family started planting Moon-white Orange across the slope.</p><p class='bio-entry'>As the oranges sold, we became a family that even the mainland had heard of. We also became strangers to the fishing family who had helped us in the beginning.</p><p class='bio-entry'><strong>December 24, 1943</strong> — Our son married the fisherman's older daughter. Both families were against it, and something in me was uneasy too.</p><p class='bio-entry'><strong>August 27, 1944</strong> — She died in childbirth and left behind a granddaughter with albinism.</p><p class='bio-entry'><strong>1950</strong> — Our son married again, and the family business moved from selling oranges to running a factory.</p><p class='bio-entry'><strong>January 9, 1960</strong> — My husband died.</p><p class='bio-entry'><strong>April 20, 1963</strong> — I died. I was buried on Orange Island, right next to him.</p>",
+                        "bio_zh": "<p class='bio-entry'><strong>1902年2月14日</strong> — 我出生在平原市。</p><p class='bio-entry'><strong>1923年</strong> — 我和青梅竹马的邻居家儿子结婚。</p><p class='bio-entry'><strong>1924年4月10日</strong> — 我们的儿子在平原市出生。</p><p class='bio-entry'><strong>1927年</strong> — 我和丈夫带着儿子搬到了海上的渔岛。邻居渔民一家帮我们盖了房子，我还跟渔民家的妻子学会了做海棘果干。</p><p class='bio-entry'><strong>1927年冬天</strong> — 丈夫把一株快死的皇家酸橙嫁接到了海棘果树桩上，没想到它活了下来。</p><p class='bio-entry'><strong>1932年</strong> — 那棵树长出了无比美味的月白橘。我们全家开始把月白橘种满山坡。</p><p class='bio-entry'>随着橘子大卖，我们家成了在大陆都闻名的富豪，但也和曾经帮过我们的渔民一家生分了。</p><p class='bio-entry'><strong>1943年12月24日</strong> — 儿子娶了渔民家的大女儿。双方的大人都反对这桩婚事，我心里也隐隐不安。</p><p class='bio-entry'><strong>1944年8月27日</strong> — 儿媳难产去世，留下了患白化病的孙女。</p><p class='bio-entry'><strong>1950年</strong> — 儿子娶了第二任妻子，家里的生意也从卖橘子变成了开加工厂。</p><p class='bio-entry'><strong>1960年1月9日</strong> — 丈夫去世。</p><p class='bio-entry'><strong>1963年4月20日</strong> — 我去世。我葬在了橘子岛，和丈夫的墓挨在一起。</p>"
+                },
+                "Ba1": {
+                        "x": 187.5,
+                        "y": 104,
+                        "bp": "orange_island",
+                        "by": "1924",
+                        "dy": "1944",
+                        "name_en": "The Lighthouse Bride",
+                        "name_zh": "灯塔新娘",
+                        "rel_en": "Great-Great-Grand-Aunt",
+                        "rel_zh": "曾曾外姨婆",
+                        "sum_en": "One of the first children born on the island. She had her wedding in the lighthouse and died giving birth to the daughter.",
+                        "sum_zh": "岛上最早出生的孩子之一。不顾反对在灯塔与完婚，生下女儿时难产去世，两家自此决裂。",
+                        "bio_en": "<p class='bio-entry'><strong>September 20, 1924</strong> — My twin sister and I were born on Fish Island, which later became Orange Island. Our parents were the island's first settlers.</p><p class='bio-entry'><strong>1927</strong> — A new family arrived with a little boy our age. All through our childhood, the three of us were each other's best friends, and we grew up happy here.</p><p class='bio-entry'><strong>1932</strong> — The tree in their yard grew the delicious Moon-white Orange. Our families worked together all the time, and we traded fish for fruit.</p><p class='bio-entry'><strong>Late 1930s</strong> — Their orange business grew, and the grown-ups drifted apart, with a lot of resentment nobody could explain. It never touched the three of us. I fell in love with the boy next door.</p><p class='bio-entry'><strong>December 24, 1943</strong> — He and I were married on the top floor of the newly finished lighthouse. Hardly anyone blessed us; besides the two of us, the only guest was my twin sister. We swore that even if the whole world was against us, we would stay together.</p><p class='bio-entry'><strong>August 27, 1944</strong> — I gave birth to a daughter, white to the point of being transparent, like an angel. The birth was too hard, and my life ended there. Before I went, I put my daughter in my sister's hands, because I did not know whether my husband would survive this.</p><p class='bio-entry'>I was buried on the flat ground at the northeast corner of Orange Island. It was the island's first grave.</p>",
+                        "bio_zh": "<p class='bio-entry'><strong>1924年9月20日</strong> — 我和双胞胎妹妹出生在渔岛（后来的橘子岛）。父母是岛上最早的定居者。</p><p class='bio-entry'><strong>1927年</strong> — 岛上来了新邻居，他们家有一个和我们同岁的小男孩。童年和少年时期，我和妹妹，还有他，是彼此最好的朋友，在岛上快乐地长大。</p><p class='bio-entry'><strong>1932年</strong> — 邻居家的树长出了好吃的月白橘，我们两家人经常一起劳作，用海鲜换橘子。</p><p class='bio-entry'><strong>1930年代后期</strong> — 邻居家的橘子生意做大了，大人们的关系渐渐疏远，还夹杂着很多说不清的怨恨。但这没有影响我们三个人的感情。我爱上了邻居家的男孩。</p><p class='bio-entry'><strong>1943年12月24日</strong> — 我和他在新建成的灯塔顶层结了婚。我们的婚姻没有得到太多人的祝福，婚礼上除了我们，宾客只有我的双胞胎妹妹。我们发誓，即便全世界都反对，我们也要在一起。</p><p class='bio-entry'><strong>1944年8月27日</strong> — 我生下了一个像天使一样白到透明的女儿。但我因为难产，生命走到了尽头。临终前，我把女儿托付给了妹妹，因为我不知道丈夫能不能撑过去。</p><p class='bio-entry'>我被安葬在橘子岛东北角的平地上，那是岛上的第一座墓。</p>"
+                },
+                "cD": {
+                        "x": 263.5,
+                        "y": 105,
+                        "bp": "outside",
+                        "by": "1924",
+                        "dy": "1985",
+                        "name_en": "The First Island Mayor",
+                        "name_zh": "第一任岛长",
+                        "rel_en": "Great-Grandfather · The First Island Mayor",
+                        "rel_zh": "曾爷爷 · 第一任岛长",
+                        "sum_en": "The First Island Mayor. To protect his albino daughter he built a nocturnal society and the Holy Water Ritual.",
+                        "sum_zh": "第一任岛长。为保护患白化病的女儿，建立“昼伏夜出”的规则与“圣水仪式”，亲手打造了这座反乌托邦。",
+                        "bio_en": "<p class='bio-entry'><strong>April 10, 1924</strong> — I was born in Plains City.</p><p class='bio-entry'><strong>1927</strong> — My parents brought me to Fish Island, sixty kilometers southeast of the mainland. One family already lived there, a fisherman and his wife with twin daughters born in 1924, the same year as me. With their help we built a small house on the north side of the island. On the slope behind it grew nothing but Sea-Thorn, tiny fruit, sour and rough. The fisherman's wife taught my mother how to dry it so we could eat it and keep scurvy away.</p><p class='bio-entry'><strong>Winter 1927</strong> — My father had brought an ornamental Royal Sour Orange from home. It could not take the island climate and was dying, so he grafted it onto a native Sea-Thorn stump in the yard. In the spring of 1928 the graft leafed out. It lived.</p><p class='bio-entry'><strong>1932</strong> — The grafted tree threw a bud sport and grew pale, enormous, sweet, juicy Moon-white Oranges. Hired hands came, and my parents took me along while we grafted Moon-white Orange onto the Sea-Thorn all over the slope.</p><p class='bio-entry'>I grew up happy here. The twin sisters were my best friends. Our two families got along; we always had the freshest fish, and Moon-white Orange became an important food for them, so they never had to fight with Sea-Thorn fruit again.</p><p class='bio-entry'><strong>Late 1930s</strong> — The harvest was huge and we shipped it to the mainland, where it became the fashionable fruit in every big city. My parents began teaching me how to grow and trade. Workers and merchants from the mainland started calling the place Orange Island, and a few years later nobody remembered the name Fish Island at all.</p><p class='bio-entry'><strong>December 24, 1943</strong> — I married the older of the twin sisters. Almost nobody blessed that marriage; by then the two families had drifted far apart, and mixed into that distance was a resentment nobody could explain. We held the wedding on the top floor of the lighthouse, which had been finished three years earlier. Apart from the two of us, the only guest was her twin sister.</p><p class='bio-entry'><strong>August 27, 1944</strong> — My daughter was born. She was so beautiful, white to the point of being transparent, like an angel. That same day my wife died in childbirth. It was the darkest day of my life.</p><p class='bio-entry'><strong>August 12, 1947</strong> — Harbor City Central Hospital diagnosed my daughter with \"congenital oculocutaneous albinism, complete type; macular hypoplasia with severe visual impairment.\" The doctor's instruction was: she must avoid sunlight for the rest of her life.</p><p class='bio-entry'><strong>Mid-to-late 1940s</strong> — As production rose we hired large numbers of seasonal pickers. They complained constantly that the island sun burned their skin. My father moved the picking to night and let them sleep through the day, out of the sun.</p><p class='bio-entry'><strong>1949</strong> — I built a small playground in our yard. My daughter loved it. Sometimes the seasonal workers' children came to play, and a noisy yard made her happy.</p><p class='bio-entry'><strong>1950</strong> — A young woman fresh out of the Royal Economics College, the daughter of a family of doctors, came to the island on her graduation trip. We married very quickly.</p><p class='bio-entry'><strong>1950–1955</strong> — With her education and her connections, we built an orange processing plant on the island. Low-margin, high-risk shipments of fresh fruit became manufacturing and industrial trade. In 1951, while we were developing the production line, she brought in a chemistry professor from Plains University. He confirmed that the peel of the Moon-white Orange contains an enormous amount of furanocoumarins. So we finally learned why \"the island sun burns you.\" It was never the sun. It was the juice from the peel on your skin.</p><p class='bio-entry'><strong>1951</strong> — My daughter had reached the age where she needed playmates. I took my wife's advice and had furanocoumarins added to the water in the yard's playground. After that the workers' children could no longer go out in the daytime. The yard was busy at night, and my daughter was happy.</p><p class='bio-entry'><strong>August 28, 1955</strong> — My son was born.</p><p class='bio-entry'><strong>1955–1960</strong> — The Moon-white Orange business grew fast. We needed people, so I built housing and everything that goes with it, plus a new water park: Holy Water Plaza. That is when people started calling me the Island Mayor.</p><p class='bio-entry'><strong>1958</strong> — My wife and I decided to send our three-year-old son off the island, to be raised by his grandfather and uncles. She said he should attend the best schools. She was probably right. With him gone she had more time too, and she ran the factory and the business better than I did. That left me more time with my daughter.</p><p class='bio-entry'><strong>1960</strong> — I had given the new residents safe, comfortable homes and decent wages, so I felt I had the right to ask something of everyone who came: sleep by day, live by night, and attend the Holy Water Ritual every Sunday. That way my daughter's world would always be full of people.</p><p class='bio-entry'><strong>1960</strong> — My father died. My mother died in 1963. The old fishing couple had passed a few years before that. Under my wife's management the factory and the business kept growing, and she started her own perfume label. Because of the factory she spent more than half her time in Harbor City. I did not mind. It meant more time with my daughter.</p><p class='bio-entry'><strong>February 14, 1980</strong> — My daughter died. After I buried her I did not know what I was supposed to do with myself. I kept going up to the top of the lighthouse to remember the day I got married in 1944. My late wife's twin sister went up there often too. We would sit without a word, neither of us knowing what to say.</p><p class='bio-entry'><strong>1985</strong> — I tried to reach my son in Harbor City. I could not get through.</p><p class='bio-entry'><strong>November 12, 1985</strong> — I died, probably of a heart attack. I was buried next to my daughter.</p>",
+                        "bio_zh": "<p class='bio-entry'><strong>1924年4月10日</strong> — 我出生在平原市。</p><p class='bio-entry'><strong>1927年</strong> — 父母带着我一起移居到距离大陆东南六十公里的渔岛。当时岛上已有一户居民，是一对渔民夫妻，他们家有一对双胞胎女儿，和我一样出生于1924年。我们家在渔民一家的帮助下，在小岛北面盖起了一栋小屋子，屋子后的山坡上是整片的海棘果树林，果实小小的，又酸又涩。渔民家的阿姨教我妈妈怎么把它做成能吃的果干，预防坏血病。</p><p class='bio-entry'><strong>1927年冬天</strong> — 父亲从老家带来的一株观赏用的皇家酸橙无法适应小岛气候，奄奄一息，他把它嫁接到了院子里的原生海棘果树桩上。1928年春天，嫁接枝长出新芽，奇迹般存活。</p><p class='bio-entry'><strong>1932年</strong> — 院子里的嫁接橙树发生芽变，长出了苍白、巨大、甘甜、多汁的月白橘。后来，家里来了一些帮手，父母带着我把月白橘嫁接到了整片山坡的海棘果上。</p><p class='bio-entry'>童年和少年时期，我在渔岛上快乐地长大，双胞胎姐妹是我最好的朋友。我们两家的关系和睦融洽，我们总是能吃到最新鲜的鱼，而月白橘也成为了渔民家的重要食物，他们再也不用费劲处理海棘果的果实了。</p><p class='bio-entry'><strong>1930年代后期</strong> — 月白橘大丰收，销售往大陆，成为各大城市追捧的时尚水果。父母也开始教我月白橘的种植与贸易。大陆来的工人和商人开始管渔岛叫橘子岛，几年后，再也没有人记得“渔岛”这个名字了。</p><p class='bio-entry'><strong>1943年12月24日</strong> — 我和渔民家双胞胎中的姐姐结婚。这桩婚姻没有得到多少人的祝福，因为当时两家人的关系已经疏远了很多，疏远中还夹杂着一些说不清缘由的怨恨。婚礼在落成三年的灯塔顶层举行，除了我和妻子，宾客只有妻子的双胞胎妹妹。</p><p class='bio-entry'><strong>1944年8月27日</strong> — 我的女儿出生，她太美了，像天使一样白到透明。女儿出生当日，妻子难产去世。这是我人生中最黑暗的一天。</p><p class='bio-entry'><strong>1947年8月12日</strong> — 女儿被海港城中心医院诊断为“先天性白化病，完全型；黄斑发育不良，视力严重受损”，医嘱为“终生需避免阳光照射”。</p><p class='bio-entry'><strong>1940年代中后期</strong> — 随着月白橘产量提升，采摘季招募了大量的季节性工人。工人们总是抱怨小岛的日光太毒辣、晒伤皮肤。父亲决定把橘子采摘工作改到晚上进行，白天睡觉，躲避毒辣的阳光。</p><p class='bio-entry'><strong>1949年</strong> — 我在院子里建造了小型乐园，女儿很喜欢，有时候季节性工人的孩子也来玩，热热闹闹的院子让女儿很开心。</p><p class='bio-entry'><strong>1950年</strong> — 一名刚刚从皇家经济学院毕业的医生世家的女儿来到小岛做毕业旅行，我们迅速结了婚。</p><p class='bio-entry'><strong>1950—1955年</strong> — 借助妻子的学识和人脉，我们在岛上建起了橘子加工厂，低附加值、高运输风险的橘子鲜果贸易升级为加工业和工业品贸易。1951年，研发加工生产线的时候，妻子请来了平原大学的化学教授，教授确定月白橘的果皮中含有巨量的呋喃香豆素。至此，“小岛的太阳晒伤皮肤”的原因也找到了：伤害季节性工人的不是阳光，而是沾到皮肤上的橘皮汁水。</p><p class='bio-entry'><strong>1951年</strong> — 女儿到了需要玩伴的年龄，我听从妻子的建议，往院子里乐园的水中添加呋喃香豆素。从此，季节性工人的孩子们再也无法白天出门，晚上的院子里很热闹，女儿很开心。</p><p class='bio-entry'><strong>1955年8月28日</strong> — 儿子出生。</p><p class='bio-entry'><strong>1955—1960年</strong> — 月白橘产品的规模和利润迅速增长，我们需要大量人手，所以我在岛上新建了大量住宅和生活配套，还有新的水上乐园——圣水广场。我获得了“岛长”的称号。</p><p class='bio-entry'><strong>1958年</strong> — 和妻子商量后决定，把三岁的儿子送往岛外，由外公和舅舅抚养。妻子说他应该念最好的学校，她应该是对的。儿子送走后，妻子也有了更多的时间，她管工厂和生意管得比我好，那么我就有更多的时间陪女儿。</p><p class='bio-entry'><strong>1960年</strong> — 我给了新移民安全舒适的居住环境和不错的工资，所以我觉得我有权力给上岛的新居民提一个要求——都必须昼伏夜出，而且周日必须参加圣水仪式。这样我女儿的世界就总是热热闹闹的了。</p><p class='bio-entry'><strong>1960年</strong> — 父亲去世了；1963年，母亲也去世了。渔民家的老两口前几年也去世了。工厂和生意在妻子的管理下越做越大，她还创建了自己的香水品牌。为了工厂，她有一大半时间住在海港城。我觉得还好，可以多陪陪女儿。</p><p class='bio-entry'><strong>1980年2月14日</strong> — 女儿去世。安葬好女儿后，我不知道自己还应该干什么。我经常去灯塔顶层，怀念1944年结婚那天的场景。亡妻的双胞胎妹妹也经常去灯塔，我们相对无言，不知该说什么。</p><p class='bio-entry'><strong>1985年</strong> — 我尝试联系在海港城的儿子，没联系上。</p><p class='bio-entry'><strong>1985年11月12日</strong> — 我去世了，可能是心脏病。我葬在女儿的墓旁。</p>"
+                },
+                "Ba2": {
+                        "x": 137.5,
+                        "y": 104,
+                        "bp": "orange_island",
+                        "by": "1924",
+                        "dy": "1995",
+                        "name_en": "Lighthouse Dreamer",
+                        "name_zh": "灯塔守望者",
+                        "rel_en": "Great-Great-Grandmother",
+                        "rel_zh": "曾曾外婆",
+                        "sum_en": "She tore up her university acceptance letter to raise her twin sister's albino daughter.",
+                        "sum_zh": "为照顾双胞胎姐姐留下的白化病女儿，当场撕毁大学录取通知书，终身没有离岛。",
+                        "bio_en": "<p class='bio-entry'><strong>September 20, 1924</strong> — My twin sister and I were born on Fish Island, though everyone ended up calling it Orange Island. Our parents were the first settlers, and they lived by fishing.</p><p class='bio-entry'><strong>1927</strong> — A new family arrived with a little boy who was also three. With our father and mother's help, they built a small house beside the Sea-Thorn slope and stayed. When my mother went out to pick Sea-Thorn, my sister and I played at their house.</p><p class='bio-entry'>Through childhood and into our teens, my sister, the boy next door, and I were each other's best friends. We grew up happy on this island.</p><p class='bio-entry'><strong>1932</strong> — Their Royal Sour Orange tree mutated and grew Moon-white Oranges. They were unbelievably sweet and juicy. The neighbors said they were going to plant the whole slope with them, which sounded wonderful to us. Our families were close; we traded fish for their fruit, and sometimes the whole family helped with the grafting. But grafting was hard work. Fishing was more fun.</p><p class='bio-entry'><strong>From 1936</strong> — Their oranges started selling off the island. They got busier and busier and hired a lot of outsiders, and we went back to fishing. The grown-ups drifted apart. Whatever the grown-ups did, my sister, the boy next door and I stayed as close as ever.</p><p class='bio-entry'><strong>1940</strong> — The lighthouse was finished. From that day on I went up there every single day to look at the view. I always ended up watching the shipping lane to the mainland, dreaming of the day I would go out into the world.</p><p class='bio-entry'><strong>December 24, 1943</strong> — My sister and the boy next door were married in the lighthouse. I watched them swear that even if the whole world was against them, they would stay together.</p><p class='bio-entry'><strong>April 5, 1944</strong> — My acceptance letter from Plains Art University arrived.</p><p class='bio-entry'><strong>August 22, 1944</strong> — My father packed my luggage for university in heavy canvas. Inside were my clothes, washed until they had faded, folded flat, and every gap stuffed with my father's dried fish and my mother's dried Sea-Thorn.</p><p class='bio-entry'><strong>1944</strong> — My sister was pregnant and due at the end of August. I decided to stay until the baby came and go to university after. Then it went wrong. She died in childbirth. Before she went she asked me to look after her child, and I promised, and I tore up my acceptance letter right there in front of her. We buried her on the flat ground at the northeast corner of the island. There was nothing out there. Hers was the only grave.</p><p class='bio-entry'><strong>August 1947</strong> — My father took my niece to Harbor City to see a doctor. I had already bought her a child's snorkeling set for her birthday, and I left the package unopened until she came home. What came home with her was bad news. It was confirmed: congenital albinism, incurable. She could never be in the sun.</p><p class='bio-entry'><strong>September 20, 1948</strong> — I married a young man who had come to the island as a seasonal picker. He was from Old Sail Town, where my parents were born. After the wedding he went back to fishing and went out to sea with my father. He loved fishing. His eyes lit up every time before he sailed.</p><p class='bio-entry'><strong>August 27, 1949</strong> — Our child was born, a healthy, lively daughter.</p><p class='bio-entry'><strong>1956</strong> — Both of my parents died in the same year. I buried them beside my sister. There were three graves there now; it was starting to be a cemetery. When the funeral was over I went home and tried to remember the way my mother had dried Sea-Thorn. After a lot of failures I got it right. My husband said it was good, and that from then on he would take that to sea instead of dried Moon-white Orange.</p><p class='bio-entry'><strong>February 14, 1980</strong> — My niece died. My promise to my sister was finished. From then on I meant to live entirely for myself and my own family.</p><p class='bio-entry'><strong>September 9, 1980</strong> — My husband died in a shipwreck while out fishing. I built him an empty grave in the cemetery and put a full sack of dried Sea-Thorn inside it.</p><p class='bio-entry'><strong>December 5, 1995</strong> — I died of old age. I was buried beside my husband, not far from my parents and my sister.</p>",
+                        "bio_zh": "<p class='bio-entry'><strong>1924年9月20日</strong> — 我和双胞胎姐姐出生在渔岛（后来大家都叫它橘子岛）。父母是岛上最早的定居者，靠捕鱼为生。</p><p class='bio-entry'><strong>1927年</strong> — 岛上来了新邻居，他们带着一个同样三岁的小男孩。在爸爸妈妈的帮助下，他们在海棘果山坡旁边盖了一栋小房子住了下来。我妈妈去采海棘果的时候，我和姐姐就在他们家玩。</p><p class='bio-entry'>童年和少年时期，我和姐姐，还有邻居家的小男孩是彼此最好的朋友，在岛上快乐地长大。</p><p class='bio-entry'><strong>1932年</strong> — 邻居家的皇家酸橙树发生了变异，长出了月白橘。月白橘超甜超多汁，太好吃了。邻居家叔叔阿姨说他们要把这个好吃的橘子种满山坡，那真是太好啦。我们两家关系很亲密，我们家用海鲜换他们的橘子，全家有时候也帮忙嫁接果树，但是这个工作太难了，还是捕鱼更开心。</p><p class='bio-entry'><strong>1936年开始</strong> — 邻居家的月白橘卖到岛外了，他们越来越忙，请了很多岛外的人帮忙，我们又回归到捕鱼的生活。两家大人的关系逐渐疏远。但不管大人们怎样，我和姐姐，还有邻居家的男孩依然保持着最亲密的关系。</p><p class='bio-entry'><strong>1940年</strong> — 岛上建成了灯塔。从那一天起，我每天都会去灯塔看风景。我总是望着那条通往大陆的航道，梦想着有一天能去外面的世界。</p><p class='bio-entry'><strong>1943年12月24日</strong> — 姐姐和邻居家的男孩在灯塔完婚，我见证了他们“即便全世界都反对，也要在一起”的誓言。</p><p class='bio-entry'><strong>1944年4月5日</strong> — 我收到了大陆平原艺术大学的录取通知书。</p><p class='bio-entry'><strong>1944年8月22日</strong> — 父亲用粗帆布为我打包好了去大学的行李，里面整齐地叠着浆洗发白的衣服，还塞满了父亲做的鱼干和母亲做的海棘果干。</p><p class='bio-entry'><strong>1944年</strong> — 姐姐怀孕了，预产期在8月末，我决定陪她生完孩子再去上大学。但不幸还是发生了，姐姐难产去世。临终前，她托付我照顾她的孩子，我答应了她，并且当场撕掉了录取通知书。我们把姐姐葬在小岛东北角的平地上，那里什么都没有，连墓也只有她一座。</p><p class='bio-entry'><strong>1947年8月</strong> — 外甥女被爸爸带着去海港城看病。我早早买好了一套儿童浮潜套装给她当生日礼物，包裹等她从海港城回来再拆。然而，和她一起回来的是一个坏消息：她的病确诊了，是无法治好的先天性白化病，她永远不能见阳光。</p><p class='bio-entry'><strong>1948年9月20日</strong> — 我嫁给了一个来岛上做季节采摘工的年轻人，他来自旧帆镇，那里也是我父母的出生地。婚后，他重新做起了渔民，和爸爸一起出海。他很喜欢捕鱼，每次出海前，眼睛都亮亮的。</p><p class='bio-entry'><strong>1949年8月27日</strong> — 我们的孩子出生了，是个健康活泼的女儿。</p><p class='bio-entry'><strong>1956年</strong> — 我的父母在同一年去世。我把他们葬在姐姐的墓旁边。这里有三座墓了，可以算得上是个墓园了。葬礼结束后，我回到家，努力回想妈妈当年教的方法，失败了很多次后，做成了野生海棘果干。丈夫说很好吃，以后出海都带这个，不需要月白橘干了。</p><p class='bio-entry'><strong>1980年2月14日</strong> — 外甥女去世。我完成了对姐姐的承诺。以后的日子，我要全心全意为自己和自己的家了。</p><p class='bio-entry'><strong>1980年9月9日</strong> — 我的丈夫在出海捕鱼时遭遇海难去世。我在墓园为他建了一个衣冠冢，里面放了满满一袋子海棘果干。</p><p class='bio-entry'><strong>1995年12月5日</strong> — 我自然老去，离开了这个世界。我葬在丈夫身边，离父母和姐姐也不远。</p>"
+                },
+                "f": {
+                        "x": 87.5,
+                        "y": 112,
+                        "bp": "outside",
+                        "by": "1926",
+                        "dy": "1980",
+                        "name_en": "Fisherman",
+                        "name_zh": "渔夫",
+                        "rel_en": "Great-Great-Grandfather",
+                        "rel_zh": "曾曾外公",
+                        "sum_en": "Came from Old Sail Town as a seasonal picker, then became a fisherman again. Lost in a shipwreck.",
+                        "sum_zh": "从旧帆镇来的季节采摘工，上岛后重新做回渔民。最终在出海时遭遇海难。",
+                        "bio_en": "<p class='bio-entry'><strong>May 18, 1926</strong> — I was born in Old Sail Town, on the mainland coast. By the time I arrived, the waters around Old Sail Town were already bad for fishing. The old men said it was because Harbor City, thirty kilometers away, was too loud. Every young person went to Harbor City to make a living. There were hardly any young fishermen left.</p><p class='bio-entry'><strong>May 1, 1943</strong> — To earn a little more, I went to Orange Island as a Moon-white Orange picker. The work only lasted three months, May through July, and it paid more than a whole year of fishing.</p><p class='bio-entry'><strong>1947</strong> — When the picking season ended, I did not leave. I had found a fishing family on the southeast side of the island, and they happened to want a hand. I was in my twenties and I started learning to fish, and something in my Old Sail Town blood woke up. The old people said this place used to be called Fish Island. It was heaven for a fisherman. Picking oranges is easy: the fruit is right there, you reach out and take it. But where the fish are, and where they are going, is something you have to watch for, imagine, even understand.</p><p class='bio-entry'><strong>September 20, 1948</strong> — I proposed to a beautiful island girl. She was the daughter of the man teaching me to fish. She had been going to university on the mainland, but she stayed to look after her newborn niece. We were married.</p><p class='bio-entry'><strong>August 27, 1949</strong> — Our daughter was born.</p><p class='bio-entry'><strong>May 7, 1957</strong> — The water changed, and there were no fish left off the west or south sides of the island. I had to move to the waters two nautical miles north.</p><p class='bio-entry'><strong>March 5, 1970</strong> — My granddaughter was born. Like my daughter, she is the most cheerful and the toughest woman I have ever known.</p><p class='bio-entry'><strong>1970s</strong> — The fish kept thinning out. To keep us going, my trips got longer and longer, from two or three days to two or three weeks.</p><p class='bio-entry'><strong>September 9, 1980</strong> — I died in a shipwreck while out fishing. The sea never brought my body back to Orange Island, but my wife built me a headstone there. I like the direction it faces.</p>",
+                        "bio_zh": "<p class='bio-entry'><strong>1926年5月18日</strong> — 我出生在大陆沿海的旧帆镇。我出生的时候，旧帆镇周围已经不太适合捕鱼了，老人们说是因为三十公里外的海港城太吵了。镇里的年轻人都去海港城谋生，年轻的渔民很少。</p><p class='bio-entry'><strong>1943年5月1日</strong> — 为了多赚点钱，我来到橘子岛做月白橘采摘工人。这份工作只有五月到七月三个月，却能赚到捕鱼一年都赚不到的钱。</p><p class='bio-entry'><strong>1947年</strong> — 采摘季结束后我没有离开。我发现小岛东南有一家渔民，他们正好也想找个帮手。二十多岁的我开始学习捕鱼，我的“旧帆镇”血统被激活了。听老人说这里曾经叫“渔岛”，这里简直是捕鱼的天堂。摘橘子真的太容易了，橘子就在那里，伸手去摘就行；而鱼在哪里、又会去哪里，不但需要观察，还需要想象，甚至需要理解鱼。</p><p class='bio-entry'><strong>1948年9月20日</strong> — 我向一位美丽的岛上姑娘求婚了。她是教我捕鱼的师傅的女儿，本来要去大陆上大学，却为了照顾刚出生的外甥女留了下来。后来我们结了婚。</p><p class='bio-entry'><strong>1949年8月27日</strong> — 我们的女儿出生了。</p><p class='bio-entry'><strong>1957年5月7日</strong> — 受环境变化影响，岛的西面和南面已经捕不到鱼了，我只能把目标改到岛北侧两海里的水域。</p><p class='bio-entry'><strong>1970年3月5日</strong> — 我的外孙女出生了，她和我女儿一样，是我见过最乐观最坚强的女性。</p><p class='bio-entry'><strong>1970年代</strong> — 鱼群越来越少，为了维持生计，我的出海周期越来越长，从两三天延长到两三周。</p><p class='bio-entry'><strong>1980年9月9日</strong> — 我在一次出海捕鱼中遭遇海难去世。海浪没能把我的尸骨冲回橘子岛，但是妻子给我在橘子岛上建了一个墓碑，墓碑的朝向我很满意。</p>"
+                },
+                "E": {
+                        "x": 312.5,
+                        "y": 115,
+                        "bp": "outside",
+                        "by": "1928",
+                        "dy": "2020",
+                        "name_en": "Perfume Queen",
+                        "name_zh": "香水女王",
+                        "rel_en": "Great-Grandmother · The Perfume Queen",
+                        "rel_zh": "曾奶奶 · 香水女王",
+                        "sum_en": "The rebellious daughter of an elite Harbor City family. She turned the orchard into a factory and created Blanc de Lune.",
+                        "sum_zh": "海港城精英世家的叛逆女儿，第一任岛长的第二任妻子。把果园升级成加工厂，创立“白之月”香水品牌。",
+                        "bio_en": "<p class='bio-entry'><strong>January 30, 1928</strong> — I was born into a prominent family of doctors in Harbor City. I had no idea that on an island sixty kilometers away a grafted branch had just thrown a bud sport and grown a strange Moon-white Orange. And that I would spend my whole life tied to that island.</p><p class='bio-entry'><strong>1946</strong> — I got into the Royal Economics College. Unlike my brothers, I actually got in on my own marks. I graduated top of my year, and then discovered that what my family expected of me was to get married. I insisted on a graduation trip, and they gave me a check. The number on it told me everything: they wanted me to go and look at the world of the elite. So I bought the cheapest boat ticket I could find. Destination: Orange Island.</p><p class='bio-entry'><strong>July 23, 1950</strong> — I arrived on Orange Island and ate a few Moon-white Oranges straight off the tree. So sweet it was almost sad. The man who owned the grove was kind. I decided to marry him.</p><p class='bio-entry'>Married life was as dull as I expected, and an island this size made it duller. Every night my husband was out building a playground for his pale daughter, then he came home and collapsed. There were two-week stretches where we never had a real conversation. But that was exactly what I wanted. I read. I had the island's first telephone installed. I wrote to my classmates, my professors, my elders. And eventually I worked out how to run this place.</p><p class='bio-entry'><strong>1951</strong> — I talked my husband's family into putting up more than a decade's worth of orange money and started building the processing plant.</p><p class='bio-entry'><strong>December 22, 1952</strong> — To get the enormous loan for the perfume line, I signed away dozens of pieces of fine jewelry and the only home I owned in Harbor City. In exchange, I had a perfume label: Blanc de Lune. In three years I turned the island's low-margin fresh-fruit trade into manufacturing — canned oranges and perfume. I will not go into what those three years cost me. Meanwhile, my husband's greatest difficulty was that the workers' children would not sleep during the day, so they were not around at night to play with his sick daughter.</p><p class='bio-entry'><strong>August 28, 1955</strong> — My son was born.</p><p class='bio-entry'><strong>August 30, 1958</strong> — Days after his third birthday, I bought him a one-way first-class child's ticket to Harbor City and sent him off the island, to my father and my brothers, and to the best kindergarten in Harbor City, the Sunflower Kindergarten.</p><p class='bio-entry'><strong>1958</strong> — Blanc de Lune was a triumph. That Christmas season I was on the cover of every magazine: the Perfume Queen. For the rest of my life I lived all over the world. Orange Island and Harbor City were the two places I spent the least time.</p><p class='bio-entry'><strong>1985</strong> — My husband died. It was sudden. I did not get back in time.</p><p class='bio-entry'><strong>April 15, 2020</strong> — I died alone in the hospice ward of Harbor City Central Hospital. I had known this day was coming and had already written my will: no funeral, no headstone. I did not want to leave a trace behind.</p>",
+                        "bio_zh": "<p class='bio-entry'><strong>1928年1月30日</strong> — 我出生在海港城一个显赫的医生世家。我出生的时候并不知道，离海港城六十公里的一座小岛上，有一条嫁接枝发生了芽变，长出了奇异的月白橘。而我这一辈子，也和那座小岛有着怎么也断不掉的关系。</p><p class='bio-entry'><strong>1946年</strong> — 我考入了皇家经济学院，和我的哥哥们不同，我可是真正考进去的。我以年级第一的成绩毕业，却发现家人对我的期待居然是：嫁人。在我的坚持下，父母同意我去毕业旅行，并给了我一张支票。看到支票上惊人的数目，我瞬间明白了，他们希望我去看一个“精英世界”。我偏要买一张最便宜的船票，目的地是橘子岛。</p><p class='bio-entry'><strong>1950年7月23日</strong> — 我到了橘子岛，尝到了刚下树的几个月白橘，甜到忧伤。橘子园的主人很和善，我决定和他结婚。</p><p class='bio-entry'>婚后的生活和我想象的一样无趣，这个巴掌大的小岛让生活更无趣。丈夫每天晚上都在为他苍白的女儿建儿童乐园，回家瘫倒呼呼大睡，我们甚至两周都没正经说过一次话。但这正是我想要的。我阅读，我给这个小岛装了第一台电话，我询问我的同学、老师和长辈，我终于研究出了怎么玩转这座小岛。</p><p class='bio-entry'><strong>1951年</strong> — 我说服丈夫家拿出十几年卖橘子的钱，开始建造橘子加工厂。</p><p class='bio-entry'><strong>1952年12月22日</strong> — 为了香水生产线的巨额贷款，我在担保书上抵押了几十件名贵珠宝和我在海港城的唯一住所，但我有了“白之月”香水品牌。我只花了三年时间，就把岛上低附加值的橘子鲜果贸易升级为加工业——生产橘子罐头和香水，过程中的艰苦不提也罢。而这几年间，丈夫遇到的最大困扰是：工人的孩子们不肯白天睡觉，晚上就不能来水上乐园陪他生病的女儿玩。</p><p class='bio-entry'><strong>1955年8月28日</strong> — 我的儿子出生。</p><p class='bio-entry'><strong>1958年8月30日</strong> — 儿子的三岁生日刚过，我就给他买了前往海港城的单程头等舱儿童船票，把他送出岛外，交由我父亲和兄弟抚养，去念最好的海港城向日葵幼儿园。</p><p class='bio-entry'><strong>1958年</strong> — 我的“白之月”香水大获成功。那一年的圣诞季，各大杂志的封面都是我——“香水女王”。此后的岁月里，我大部分时间都住在世界各地，橘子岛和海港城是我停留得最少的地方。</p><p class='bio-entry'><strong>1985年</strong> — 我的丈夫去世。事情很突然，我没来得及回去。</p><p class='bio-entry'><strong>2020年4月15日</strong> — 我独自一人在海港城中心医院的安宁病房去世。我早知道这一天会来，已经写好遗嘱：不举行葬礼，不留墓碑。我不想在人间留下痕迹。</p>"
+                },
+                "g": {
+                        "x": 62.5,
+                        "y": 148,
+                        "bp": "outside",
+                        "by": "1940",
+                        "dy": "1998",
+                        "name_en": "War Photographer",
+                        "name_zh": "战地摄影师",
+                        "rel_en": "Great-Grandfather · War Photographer",
+                        "rel_zh": "曾外公 · 战地摄影师",
+                        "sum_en": "A war photographer who came to the island to escape drink. His photographs recorded what the island hid.",
+                        "sum_zh": "厌战上岛的战地摄影师。用照片记录下水塔的暗管和鲎工厂的血腥，也一直与酗酒搏斗。",
+                        "bio_en": "<p class='bio-entry'><strong>July 4, 1940</strong> — I was born on the mainland.</p><p class='bio-entry'><strong>1967</strong> — I ended seven years of work as a photographer. My reason for starting — to make people see the war — had not changed. I was the one who could not hold on any longer. By then I was drinking.</p><p class='bio-entry'><strong>1968</strong> — I came to Orange Island. You cannot buy liquor here, but you can buy sleeping pills, and that was exactly what I needed.</p><p class='bio-entry'><strong>Night of October 6, 1968</strong> — For the first time in over a year I lifted a camera again and photographed a sky full of mist under blazing lights. A few days later, on a sunlit beach, I lifted it a second time and caught an island girl laughing with a huge fish held over her head. We were married not long after.</p><p class='bio-entry'><strong>March 5, 1970</strong> — Our daughter was born. She cried easily and laughed even more easily, and she is the steadiest, most unbreakable woman I have ever met.</p><p class='bio-entry'><strong>August 15, 1975</strong> — I wandered into the water tower and happened to take a strange photograph: a thin unmarked pipe spliced into the supply line that fed the water park.</p><p class='bio-entry'><strong>December 13, 1997</strong> — I photographed something terrible inside the Horseshoe Crab Factory: hundreds of horseshoe crabs drained of their blue blood, and a pile of shells in the corner, alive or dead, no one could tell.</p><p class='bio-entry'>The war came back for me every so often, and the island shop kept getting better stocked. Still, something good always came along and made me decide to quit drinking, though I only ever managed it for a while.</p><p class='bio-entry'><strong>January 15, 1998</strong> — I drank my last bottle and decided, again, to quit. This time it was because I had broken my granddaughter's favorite toy while drunk. I did not actually get drunk that night, because my eyes and hands were steady enough to repair the toy. Then I fell asleep and never woke up.</p><p class='bio-entry'>I was buried in the Orange Island cemetery. My family comes to visit often.</p>",
+                        "bio_zh": "<p class='bio-entry'><strong>1940年7月4日</strong> — 我出生在大陆。</p><p class='bio-entry'><strong>1967年</strong> — 我结束了七年的摄影师生涯。“要让别人看见战争”的初心没有改变，是我撑不下去了，我已经染上了酗酒的问题。</p><p class='bio-entry'><strong>1968年</strong> — 我来到了橘子岛，这里买不到酒，但是能买到安眠药，这正是我需要的。</p><p class='bio-entry'><strong>1968年10月6日夜晚</strong> — 我时隔一年多后第一次举起了相机，拍下了灯火通明下的漫天水雾。几天后的阳光沙滩上，我第二次举起了相机，这次捕捉到了一位美丽的岛上姑娘举着大鱼大笑的瞬间。不久后，我们结婚了。</p><p class='bio-entry'><strong>1970年3月5日</strong> — 我们的女儿出生了。她是个爱哭更爱笑的孩子，是我见过最稳定最坚韧的女子。</p><p class='bio-entry'><strong>1975年8月15日</strong> — 我逛到水塔里，偶然拍到了一张照片：水上乐园的供水管道上，被接入了一根来路不明的细管。</p><p class='bio-entry'><strong>1997年12月13日</strong> — 我拍下了鲎工厂里血腥的一幕：几百只鲎被抽干蓝色的血液，角落里堆积着不知死活的躯壳。</p><p class='bio-entry'>战争创伤每隔一段时间就会袭击我一次，而橘子岛小卖部的货架也越来越齐全。不过还好，总有特别美好的事情让我下定决心戒酒——虽然每次只成功一段时间。</p><p class='bio-entry'><strong>1998年1月15日</strong> — 我喝掉了最后一瓶酒，“又”决定戒酒了，这次的原因是我喝酒的时候弄坏了外孙女最心爱的玩具。最后一次我并没有喝醉，因为我还眼不花手不抖地修好了外孙女的玩具。但是后面睡着了，就再也没有醒来。</p><p class='bio-entry'>我被安葬在橘子岛的墓园，家人们经常来墓地看我。</p>"
+                },
+                "Bc": {
+                        "x": 212.5,
+                        "y": 153,
+                        "bp": "orange_island",
+                        "by": "1944",
+                        "dy": "1980",
+                        "name_en": "The Albino Girl",
+                        "name_zh": "白化病女孩",
+                        "rel_en": "Great-Aunt · The Albino Girl",
+                        "rel_zh": "曾姨外婆 · 白化病女孩",
+                        "sum_en": "Born with complete albinism. Her illness is the reason the whole island turned nocturnal.",
+                        "sum_zh": "cD 与 Ba1 的女儿，重度先天性白化病患者。她的病促成了全岛“昼伏夜出”的习俗。",
+                        "bio_en": "<p class='bio-entry'><strong>August 27, 1944</strong> — I was born on Orange Island. My mother died in childbirth the same day. My father and my aunt raised me.</p><p class='bio-entry'>People always said I was unusually white. My father insisted it was because I had been born as beautiful as an angel. On <strong>August 12, 1947</strong> he took me to Harbor City Central Hospital, where they told us: complete congenital albinism, macular hypoplasia, severe visual impairment. The doctor said I could never be in the sun.</p><p class='bio-entry'>After the hospital my father stopped letting me outside during the day, but he did not spend one minute less with me. He took me out at night and let me sleep the whole day at home. I loved the picking season, because there were so many people and so much noise, and sometimes there were even a few children on the island.</p><p class='bio-entry'><strong>1949</strong> — My father built a small playground in the yard: swings, a seesaw, a carousel, and a giant water slide. It drew a lot of children, but by the middle of the night they were all too sleepy and went home to bed. The hours after midnight were always lonely.</p><p class='bio-entry'><strong>October 31, 1949</strong> — My father gave me a black velvet cloak with a soft lining. It stayed with me for years. It kept off the sun, and it kept off the way people looked at a monster.</p><p class='bio-entry'><strong>1950</strong> — My father remarried. Nothing much changed for me.</p><p class='bio-entry'><strong>1951</strong> — The water in the playground pool started to smell good. It smelled like the orange grove! I loved that smell, and I was sure the other children loved it too, because they started sleeping in the day and playing at night, just like their parents. I was so happy. I really did try everything I had to make friends.</p><p class='bio-entry'><strong>1950s</strong> — A lot of new houses went up on the island and we moved into a new home. It was very large and comfortable, but I still took the children back to the water park at the old house all the time.</p><p class='bio-entry'><strong>Summer 1955</strong> — I went to my father's orange grove, and a boy who had just moved to the island called me a monster. My father beat him badly, and his family left the island soon after. That same year my half-brother was born.</p><p class='bio-entry'><strong>1960</strong> — My father built a bigger water park called Holy Water Plaza. It was not just for children anymore; the adults liked it too. He arranged for the whole island to come every Sunday. Only my aunt's family never came. The water still smelled of the orange grove, much fainter now, but I still loved it. My father said I was the only one who could smell it. Maybe so — my eyes are bad, so my nose is very good.</p><p class='bio-entry'>I hope I never grow up. Once you grow up you start asking questions. Like when I look at my mother's portrait on the back of my little round mirror and think: if she saw me now, would she think it was worth it?</p><p class='bio-entry'><strong>February 14, 1980</strong> — I died of my illness. The doctors said I would not live to adulthood, but I made it to thirty-five. If I could choose, I would not grow up at all. I would stay a child forever, in the playground at the old house.</p>",
+                        "bio_zh": "<p class='bio-entry'><strong>1944年8月27日</strong> — 我出生在橘子岛。我出生的那一天，母亲因为难产去世。我是被父亲和小姨抚养长大的。</p><p class='bio-entry'>总有人说我特别白，父亲坚持认为这是因为我生来就美得像天使。<strong>1947年8月12日</strong>，父亲带我去海港城中心医院看病，我被诊断为完全型先天性白化病，黄斑发育不良，视力严重受损。医生说我终生不能见阳光。</p><p class='bio-entry'>从医院回来后，父亲不再让我白天出门，但是他陪我的时间一点都没有减少。他经常带我晚上出门，让我整个白天在家睡觉。我喜欢橘子岛的采摘季，因为人特别多特别热闹，甚至会有几个小孩子在岛上。</p><p class='bio-entry'><strong>1949年</strong> — 父亲在院子里建了一个小乐园，有秋千、跷跷板、旋转木马，还有一个巨大的水上滑梯。乐园吸引了不少小孩子来玩，但是到了半夜他们都太困了，回去睡觉了。后半夜总是非常落寞。</p><p class='bio-entry'><strong>1949年10月31日</strong> — 父亲送给我一件内衬柔软的黑色天鹅绒斗篷，它陪了我很多年，帮我挡住了阳光，也挡住了别人看“怪物”的目光。</p><p class='bio-entry'><strong>1950年</strong> — 父亲再婚了，我的生活没什么变化。</p><p class='bio-entry'><strong>1951年</strong> — 乐园水池里的水变香了，是橘子林的香味！我喜欢这个气味，其他小孩子肯定也喜欢，因为他们也变得跟他们父母一样白天睡觉、晚上玩了。我太高兴了。我真的付出了所有努力去交朋友。</p><p class='bio-entry'><strong>1950年代</strong> — 岛上多了很多新房子，我们也搬进了新家，新家特别大，很舒服，不过我还是经常带着小孩子去老房子的水上乐园。</p><p class='bio-entry'><strong>1955年夏天</strong> — 我去父亲的橘子园，有个新搬来的小孩叫我怪物，父亲狠狠打了他，那家人随后离开了岛。同年，我同父异母的弟弟出生了。</p><p class='bio-entry'><strong>1960年</strong> — 父亲建了更大的水上乐园，叫“圣水广场”，不再仅仅适合小孩子，大人们也喜欢。父亲安排全岛人每周日在圣水广场玩，只有小姨家从来不来。水里依然有橘子林的香气，虽然淡了很多，但是我依然非常喜欢。父亲说只有我闻得到水里的香气，大概吧，我视力不好，所以我的鼻子特别灵敏。</p><p class='bio-entry'>我希望我永远也不要长大，长大了就会想很多问题。比如我常看着小圆镜背面母亲的画像想：她看到现在的我，会觉得值吗？</p><p class='bio-entry'><strong>1980年2月14日</strong> — 我病逝了。医生说我活不到成年，但我活到了三十五岁。如果给我选择，我不愿意长大，我想做一个小孩，永远待在老房子的游乐场里。</p>"
+                },
+                "Bf": {
+                        "x": 112.5,
+                        "y": 167,
+                        "bp": "orange_island",
+                        "by": "1949",
+                        "dy": "2025",
+                        "name_en": "Mother in Flower Field",
+                        "name_zh": "花田妈妈",
+                        "rel_en": "Great-Grandmother · Mother in Flower Field",
+                        "rel_zh": "曾外婆 · 花田妈妈",
+                        "sum_en": "The fourth child born on the island. She filled every yard on Orange Island with flowers, working while everyone slept.",
+                        "sum_zh": "岛上出生的第四个孩子。趁着白天全岛人熟睡时耕作，让每一个院子都开出了花。",
+                        "bio_en": "<p class='bio-entry'><strong>August 27, 1949</strong> — I was born. My father was a fisherman from Old Sail Town; my mother was the second child ever born on Orange Island. The first was my mother's twin sister, who died giving birth to my cousin. My cousin was the third child born on the island, and I was the fourth.</p><p class='bio-entry'>My cousin was ill and could not come out to play in the daytime. I wanted to keep her company, but I had spent my whole day on the beach and in the water, so by night I could barely keep my eyes open. I told my mother to go and look after her instead. I was perfectly happy alone on the sand. My father worried I was lonely and gave me a kitten. I named her Mimi.</p><p class='bio-entry'>Every day was a good day. I went out fishing with my father and sat at the lighthouse doing nothing with my mother. What I loved most was the Orange Island shoreline. Mimi and I found a cave in the rock face behind our house, and the cave led out to another beach, even more beautiful. I built my secret room in that cave and kept everything precious in there.</p><p class='bio-entry'><strong>1969</strong> — I married a photographer.</p><p class='bio-entry'><strong>March 5, 1970</strong> — Our daughter was born.</p><p class='bio-entry'>I had planned to be a fisherman, or a navigator. After my daughter was born I changed my mind. I decided to work out which flowers grew best on Orange Island. In under five years there were flowers blooming in every yard on the island. While I worked in those yards, the people inside were asleep. They wanted to watch the flowers being raised, but flowers have to be raised in the sun. Most islanders had never seen my face, but they all loved the flowers in their yards, and they called me the Mother in Flower Field.</p><p class='bio-entry'><strong>1980</strong> — My father was lost in a shipwreck. <strong>1995</strong> — My mother died.</p><p class='bio-entry'><strong>1993</strong> — My twin granddaughters were born. They were so close they were almost one person, and they reminded me of my mother and the aunt I never met. I used to resent, just a little, that my mother spent more time with my cousin than with me. Watching those two girls, I understood her immediately.</p><p class='bio-entry'>The house was full for a few years. <strong>1998</strong> — My husband died. <strong>2017</strong> — My son-in-law died. Both were buried in the cemetery. Our house got emptier and emptier, and the cemetery got fuller.</p><p class='bio-entry'><strong>2022</strong> — My great-granddaughter was born. Her father came from the family mine had refused to speak of for decades. Something felt wrong to me, and I was right: the news came that my older granddaughter had died in childbirth.</p><p class='bio-entry'><strong>January 8, 2025</strong> — I died and was buried in the family cemetery, with all of my people. None of us ever left Orange Island.</p>",
+                        "bio_zh": "<p class='bio-entry'><strong>1949年8月27日</strong> — 我出生了。我的父亲是个从旧帆镇来的渔民，母亲是橘子岛上出生的第二个孩子。岛上出生的第一个孩子是母亲的双胞胎姐姐，她生我表姐的时候去世了。我的表姐是岛上出生的第三个孩子，我是岛上出生的第四个孩子。</p><p class='bio-entry'>表姐是个病人，白天不能出来玩。我也想陪她玩，但是我白天在沙滩和海里玩得太累了，晚上总是困得不行。我让妈妈多去照顾表姐，我一个人在沙滩上就玩得很开心。爸爸怕我孤单，给了我一只小猫，我叫它咪咪。</p><p class='bio-entry'>生活的每一天都很开心，跟爸爸出海捕鱼，跟妈妈去灯塔发呆。我最喜欢的还是橘子岛的海滩。我和咪咪在家后面的岩壁上发现了一个山洞，山洞通向另一片更美的沙滩。我在山洞里建了我的秘密小屋，珍贵的东西都放在那里。</p><p class='bio-entry'><strong>1969年</strong> — 我和一个摄影师结婚了。</p><p class='bio-entry'><strong>1970年3月5日</strong> — 我们的女儿出生了。</p><p class='bio-entry'>我本来打算做一个渔民或者航海家，女儿出生后，我改变了主意，我决定研究怎么养出最适合橘子岛的花。不到五年的时间，岛上所有的院子里都长出了美丽的花。我在那些院子里工作的时候，屋子里的人都在睡觉，他们也想观察花儿培育的过程，但是花儿一定要在阳光下培育。岛民们不一定见过我，但是他们都喜欢院子里的花，他们叫我“花田妈妈”。</p><p class='bio-entry'><strong>1980年</strong> — 我的父亲在出海时遭遇海难；<strong>1995年</strong>，我的母亲去世。</p><p class='bio-entry'><strong>1993年</strong> — 我的双胞胎外孙女出生了，她们亲密得就像一个人，让我想起了我的妈妈和我从未谋面的大姨。我曾经也有一点点怨我母亲陪我表姐更多，但是看到两个外孙女，我瞬间就理解了自己的母亲。</p><p class='bio-entry'>家里热闹了几年。<strong>1998年</strong>，我的丈夫去世；<strong>2017年</strong>，我的女婿去世。他们都被安葬在了墓园里。家里的人越来越少，墓园却越来越热闹。</p><p class='bio-entry'><strong>2022年</strong> — 我的曾外孙女出生了，她的父亲来自我的家人几十年都不愿意提及的那个家庭。我隐隐感觉不对，果然噩耗传来，我的大外孙女难产去世了。</p><p class='bio-entry'><strong>2025年1月8日</strong> — 我去世了，葬在家族墓园里，我的亲人们都在那里。我们都没有离开橘子岛。</p>"
+                },
+                "cE": {
+                        "x": 287.5,
+                        "y": 185,
+                        "bp": "orange_island",
+                        "by": "1955",
+                        "dy": "2026",
+                        "name_en": "The Second Island Mayor",
+                        "name_zh": "第二任岛长",
+                        "rel_en": "Grandfather · The Second Island Mayor",
+                        "rel_zh": "爷爷 · 第二任岛长",
+                        "sum_en": "The Second Island Mayor. He knew the island's 'genes' were only furanocoumarins, and ruled on that lie anyway.",
+                        "sum_zh": "第二任岛长。早已看穿“橘子岛的基因”不过是呋喃香豆素，仍以此立法统治；后转向鲎血生意。死于大爆炸。",
+                        "bio_en": "<p class='bio-entry'><strong>August 28, 1955</strong> — I was born on Orange Island. My father was the Island Mayor; my mother came from a family of doctors in Harbor City.</p><p class='bio-entry'><strong>August 30, 1958</strong> — I left Orange Island to live with my grandfather in Harbor City. My mother said she would be in Harbor City often. She was — always for business. As for my father, I suppose there was simply too much to do on Orange Island. People told me my mother was the Perfume Queen, my father was the Mayor of Orange Island, Orange Island was a treasure island, and Orange Island belonged to my family.</p><p class='bio-entry'><strong>1973</strong> — I entered Plains University and stayed through a doctorate at its medical school. Afterward I went, as expected, to Harbor City Central Hospital, where my grandfather and my uncles were the authorities. I liked almost everything about that job, except being a doctor. That is probably why I chose the wife I did: her family ruled a commercial empire, and ruling struck me as the more worthwhile thing to do.</p><p class='bio-entry'><strong>1985</strong> — By the time I brought my wife back to Orange Island, my father had already died. I became the Island Mayor as a matter of course. The island's nocturnal rhythm was fascinating. Residents and tourists alike believed that living by night was written into Orange Island's genes. It did not take me long to work out that the famous \"genes of Orange Island\" were nothing but furanocoumarins. In 1986 I issued the <em>Orange Island Residents' Health Code</em>. My rule now stood on the side of \"the genes of nature,\" and that gave it an authority I never had to argue for.</p><p class='bio-entry'><strong>From 1990</strong> — The furanocoumarin product line started earning less, entirely because of the chief scientist at the orange factory. Furanocoumarins were his discovery, and he had spent his whole life trying to stop them being used. The tanning-product manufacturers who bought from us would keep dwindling. But I had found a new opportunity. On the eastern end of the southern beach, every breeding season, the sand filled up with horseshoe crabs. That blue blood was a gold mine that regrew itself. All I needed was to hire a marine biologist.</p><p class='bio-entry'><strong>1993</strong> — My son was born.</p><p class='bio-entry'><strong>2008</strong> — My son, fifteen, left Orange Island to study in Harbor City. The school here normally only takes primary students; the rest go to the mainland for middle school. I had spent years expanding the school's budget just so he could stay a few more years.</p><p class='bio-entry'><strong>From the 2000s</strong> — Demand for horseshoe crab blood products kept rising, and I came into conflict with the marine biologist at the crab lab. His working methods were badly hurting output and profit.</p><p class='bio-entry'>I spent a fortune rebuilding the island clinic into a small hospital, with wards and an operating room. <strong>2018</strong> — My son graduated from medical school and came back to the island the same year the hospital was finished.</p><p class='bio-entry'><strong>2021</strong> — My son married that marine biologist's daughter. In all these years he has never worked as a doctor. He became a firefighter, watching security cameras where nothing ever happens.</p><p class='bio-entry'><strong>May 30, 2026</strong> — The secret room behind my office — the store for furanocoumarins — exploded. The blast spread to the orange workshop on the ground floor and destroyed it. I died in that explosion.</p>",
+                        "bio_zh": "<p class='bio-entry'><strong>1955年8月28日</strong> — 我出生在橘子岛。我的父亲是岛长，母亲来自海港城的医生世家。</p><p class='bio-entry'><strong>1958年8月30日</strong> — 我离开橘子岛，搬去和海港城的外公一起住。母亲说她会经常回海港城，她确实经常回海港城，但都是为了生意。而父亲，应该是橘子岛上的事情太忙了吧。他们说，我的母亲是香水女王，我的父亲是橘子岛岛长，橘子岛是宝藏岛，而橘子岛是我家的。</p><p class='bio-entry'><strong>1973年</strong> — 我考入平原大学，一直念到医学院的博士。毕业后顺理成章地进入了海港城中心医院，我的外公和舅舅们都是那家医院的权威。我喜欢在中心医院这份工作的绝大部分，除了——当医生本身。这大概也是我选择自己妻子的原因——她的家庭统治着一个商业帝国，而统治，应该是更值得我去做的事情。</p><p class='bio-entry'><strong>1985年</strong> — 我带着妻子回到橘子岛的时候，父亲已经去世。我顺理成章地成了岛长。岛上昼伏夜出的规律让人着迷，居民和旅游者都相信“昼伏夜出”是橘子岛的基因，我没多久就搞明白了，所谓“橘子岛的基因”只不过是呋喃香豆素。1986年，我颁布了《橘子岛居民健康守则》，我的统治站在了“大自然的基因”这一边，获得了天然的威权。</p><p class='bio-entry'><strong>1990年开始</strong> — 呋喃香豆素产品线的收益开始减少，这都是橘子工厂那位首席科学家导致的。呋喃香豆素是他的发现，而他花了毕生的精力阻止呋喃香豆素的应用。采购呋喃香豆素的美黑产品厂家将逐渐减少。不过我也发现了新的商机：岛南部沙滩的东侧，每到鲎的繁殖季就布满了鲎，那蓝色的血液像再生金矿一样。我只需要招募一个海洋学家来就行。</p><p class='bio-entry'><strong>1993年</strong> — 我的儿子出生了。</p><p class='bio-entry'><strong>2008年</strong> — 十五岁的儿子离开橘子岛去海港城读书。橘子岛上的学校通常只收小学生，其他孩子初中就去大陆念书了，这几年我特意扩充了学校的经费，才让儿子多读了几年。</p><p class='bio-entry'><strong>2000年代以来</strong> — 鲎血产品的需求量越来越高，我和鲎实验室的海洋学家发生了分歧，他的工作方法严重影响了产量和利润。</p><p class='bio-entry'>我斥巨资重建了岛上的诊所，把诊所扩建成了一个小医院，有病房和手术室。<strong>2018年</strong>，儿子从医学院毕业回到岛上，那一年医院刚好完工。</p><p class='bio-entry'><strong>2021年</strong> — 儿子娶了那个海洋学家的女儿。这几年，他也没有当医生，而是当了一个消防员，平时看看无事发生的监控。</p><p class='bio-entry'><strong>2026年5月30日</strong> — 我办公室后的秘密房间——堆放呋喃香豆素的仓库发生大爆炸，火势蔓延到一楼，橘子车间也毁了。我死在了这场爆炸里。</p>"
+                },
+                "i": {
+                        "x": 137.5,
+                        "y": 210,
+                        "bp": "outside",
+                        "by": "1965",
+                        "dy": "2017",
+                        "name_en": "Marine Scientist",
+                        "name_zh": "海洋学家",
+                        "rel_en": "Grandfather · Marine Scientist",
+                        "rel_zh": "外公 · 海洋学家",
+                        "sum_en": "Built the horseshoe crab lab, then spent a decade watching it turn into a factory. Murdered before he could report it.",
+                        "sum_zh": "筹建鲎实验室的海洋学家，眼看实验室变成工厂。准备举报前被杀，现场被伪装成溺水。",
+                        "bio_en": "<p class='bio-entry'><strong>November 20, 1965</strong> — I was born in Harbor City.</p><p class='bio-entry'><strong>June 20, 1988</strong> — I graduated from the Royal Ocean University with a Bachelor of Science in marine biology.</p><p class='bio-entry'><strong>1990</strong> — I was offered a job on Orange Island, sixty kilometers from Harbor City: they needed a marine scientist to set up a large horseshoe crab laboratory. I had read about Orange Island in textbooks. Its summer intertidal beach is the most famous horseshoe crab breeding ground in the entire northern hemisphere. The island's nocturnal rhythm was a real advantage for studying them too. Put together, it was the perfect place for a crab lab.</p><p class='bio-entry'>The bigger surprise was that I met a girl there. <strong>1992</strong> — We were married.</p><p class='bio-entry'><strong>1992</strong> — After a year and a half of preparation, the lab was finished. I worked hard to bring in several research grants. Within six months the Island Mayor told me the grants came nowhere near covering what the lab cost to build and run. He suggested we draw blood from the crabs and produce Limulus Amebocyte Lysate (LAL) to keep the lab alive. I agreed, and bought centrifuges, hypotonic lysis tanks, freeze dryers, and everything else.</p><p class='bio-entry'><strong>Spring into summer 1993</strong> — For three months, the large crew of seasonal workers I had hastily trained worked the beach south of the lab, carrying horseshoe crabs up from the shallows and the sand, and carrying the bled ones back down to the water. I set a strict limit on how much blood could be taken from a single animal, but there was always someone who wanted to take more in one go. At the end of that breeding season, the Mayor told me the profit still did not cover the equipment.</p><p class='bio-entry'>The whole of 1993 was crushing, but my life at home held me up. My wife gave birth to twin daughters with eyes as clear as deep water. I worked nights and slept days; she slept nights and worked days. Our brief reunions at dawn and dusk were happiness enough.</p><p class='bio-entry'>Standing in 2003 and looking back over ten years, I saw that I had been compromising the entire time, and that the lab's purpose had been quietly turned inside out. Huge tanks held crabs packed on top of one another. They were pulled out on a schedule and bled, recovered in the crowded tanks, and pulled out and bled again. The death rate kept climbing, and the tanks got more crowded anyway, because you could scoop up a fresh armful from the beach without effort. The one line I managed to hold was that no single crab would lose more than thirty percent of its blood in one draw.</p><p class='bio-entry'><strong>2004</strong> — I published an important paper on the threat medical bleeding poses to horseshoe crab populations. I had discovered that the marine association's rules only banned overfishing, and that \"catch, bleed, release\" was governed by nothing at all. The paper drew attention from every direction. In the middle of all that praise, one question surfaced in my head: at what point did I, the director of this laboratory, lose the ability to protect the animals I study?</p><p class='bio-entry'>Every year the financial report still showed a loss. I could not settle down to research either, waiting day after day for the association to write a rule that would protect the crabs. <strong>2016</strong> — The Marine Conservation Association finally brought \"medical bleeding\" under horseshoe crab resource management. Now I had a legal basis. I went straight to the Island Mayor and spoke plainly: bring the death rate down, or I report this to the Marine Conservation Association. He said he would think about it.</p><p class='bio-entry'><strong>February 14, 2017</strong> — I received an anonymous threat, the letters cut from newspapers, warning me that \"the waves can swallow people who mind other people's business.\"</p><p class='bio-entry'><strong>April 12, 2017</strong> — I was murdered. It was staged as an accidental drowning. The sheriff on the case found my dive watch with blood on it and my waterproof notes, and he did not take it any further.</p><p class='bio-entry'>My wife and my daughters never left Orange Island. They buried me in the cemetery. They come to see me often.</p>",
+                        "bio_zh": "<p class='bio-entry'><strong>1965年11月20日</strong> — 我出生在海港城。</p><p class='bio-entry'><strong>1988年6月20日</strong> — 我从皇家海洋大学毕业，获得了海洋生物学理学学士学位。</p><p class='bio-entry'><strong>1990年</strong> — 我获得一个工作机会：在距离海港城六十公里的橘子岛上，需要一位海洋学家负责筹建一个大型鲎实验室。我早就在教科书上读到过橘子岛，夏天的潮间带沙滩是整个北半球最有名的鲎繁殖地。橘子岛昼伏夜出的作息对于研究鲎也是一大助力。这些因素加在一起，是建设鲎实验室的完美前提。</p><p class='bio-entry'>然而橘子岛更大的惊喜是，我遇到了一个女孩。<strong>1992年</strong>，我们结婚了。</p><p class='bio-entry'><strong>1992年</strong> — 筹备了一年半的实验室建成了。我努力引入了几项研究资金。然而不到半年，橘子岛岛长告诉我，研究资金远远不够支付鲎实验室的投资和开销。他建议采集鲎血，制成“鲎试剂”（Limulus Amebocyte Lysate, LAL），支撑实验室的发展。我同意了，为实验室添置了离心机、低渗裂解槽、冻干机等一系列设备。</p><p class='bio-entry'><strong>1993年春夏之交</strong> — 我临时培训的大量季节性工人在实验室南面的沙滩上忙碌了三个月，一趟一趟把浅海里和沙滩上的鲎运到实验室，又把实验室里被抽过血的鲎送回浅海。我严格限制了单只鲎的采血量，但是总有工人想一次多抽一点。一个繁殖季下来，岛长说利润还不够支付添置设备的成本。</p><p class='bio-entry'>整个1993年的压力都非常大，但是幸福的生活支撑住了我。妻子生下了一对拥有像深海一样清澈眼睛的双胞胎女儿。我黑夜工作白天睡觉，她黑夜睡觉白天工作，黎明和傍晚的短暂团聚，也足够幸福了。</p><p class='bio-entry'>站在2003年回看过去的十年，我发现自己在不断妥协，鲎实验室的功能被逐渐转变。巨大的养殖池里养着拥挤的鲎，这些鲎被定期抓出来抽血，抽完后在拥挤的养殖池内康复，然后再被定期抓出来抽血。鲎的死亡率一直上升，但池子里的鲎越来越拥挤，因为海滩那边轻松就能抓到一大把。我唯一能守住的底线是：单只鲎单次抽血量不能超过百分之三十。</p><p class='bio-entry'><strong>2004年</strong> — 我发表了一篇重要的论文，关于医学采血对鲎种群的威胁。因为我发现海洋协会只有针对过度捕捞的禁令，而“抓起来—采血—放回去”这种行为完全没有法规来管。论文引起了各界的注意，赞美声中我脑海里跳出一个问题——我作为鲎实验室的主任，是什么时候失去保护我的实验对象的能力的？</p><p class='bio-entry'>每年还是能收到亏损的财务报告。我也无法潜心做研究，天天等着协会出台保护鲎的制度。<strong>2016年</strong>，海洋保护协会终于将“医学采血”纳入“鲎资源管理”的范畴。我有了法规依据，立刻找岛长开诚布公地谈了一次，要求控制鲎的死亡率，否则我将上报海洋保护协会。岛长说他考虑一下。</p><p class='bio-entry'><strong>2017年2月14日</strong> — 我收到了一封用报纸字母拼凑的匿名威胁信，警告我“海浪能吞噬多管闲事的人”。</p><p class='bio-entry'><strong>2017年4月12日</strong> — 我被害了，凶手把现场伪装成意外溺水。查案的治安官明明发现了带血的潜水表和我的防水笔记，却没有继续查下去。</p><p class='bio-entry'>妻子和孩子们都没有离开橘子岛，她们把我安葬在墓园。她们经常来看我。</p>"
+                },
+                "ProudGrandpaM": {
+                        "x": 337.5,
+                        "y": 198,
+                        "bp": "outside",
+                        "by": "1960",
+                        "dy": "2023",
+                        "name_en": "Proud Grandfather",
+                        "name_zh": "为孙女骄傲的外公",
+                        "rel_en": "Proud Grandfather",
+                        "rel_zh": "为孙女骄傲的外公",
+                        "sum_en": "Came from North Mountain City for the night shift, bought a house with his wife, and pinned every hope on his granddaughter.",
+                        "sum_zh": "从北山市来上夜班的工人，和妻子攒钱买下独栋屋，把全部希望寄托在聪明的外孙女身上。",
+                        "bio_en": "<p class='bio-entry'><strong>March 10, 1960</strong> — I was born in North Mountain City. There was never enough water there, never enough land, and it was hard to get anywhere.</p><p class='bio-entry'><strong>1980</strong> — I got married. My wife heard from someone back home that a place called Orange Island was hiring night-shift workers. One month's wages there was worth half a year in North Mountain City. We took a bus to Plains City, a train to Harbor City, and a boat to Orange Island. This place was rich. The general store sold everything. My wife and I both found work at the orange processing plant, and during picking season we could take overtime for extra pay. We could not spend what we earned.</p><p class='bio-entry'><strong>1985</strong> — With every coin we had saved plus a bank loan, we bought our own detached house on the island. That was the proudest day of my life. That same year my daughter was born.</p><p class='bio-entry'><strong>2003</strong> — My daughter grew up. She put on a white coat and became a technician on the perfume line at the orange processing plant.</p><p class='bio-entry'><strong>2007</strong> — My daughter married. Her husband was a technician at the crab lab, doing high-skill work.</p><p class='bio-entry'><strong>2008</strong> — My granddaughter was born. She was clever from the start and did well in school. My hope was that she would go to the Royal Ocean University in Harbor City, like the director of the crab lab, and come back an engineer.</p><p class='bio-entry'><strong>December 24, 2023</strong> — I died of illness. I was buried in the cemetery on Orange Island. I love this island.</p>",
+                        "bio_zh": "<p class='bio-entry'><strong>1960年3月10日</strong> — 我出生在北山市。北山市缺水，缺土地，交通不便。</p><p class='bio-entry'><strong>1980年</strong> — 我结婚了。我妻子从同乡那里听到消息，一个叫橘子岛的地方在招收夜班工人，一个月的工资顶北山市半年的收入。我和妻子坐大巴到了平原市，又坐火车到了海港城，最后坐船到了橘子岛。这里太富有了，杂货铺里什么都能买得到。我和妻子在橘子加工厂里都找到了工作，每年的采摘季我们还能加班多拿工资，我们赚的钱根本花不完。</p><p class='bio-entry'><strong>1985年</strong> — 我和妻子用攒下的所有积蓄加上银行贷款，在岛上买下了一栋属于我们自己的独栋屋。那是我这辈子最自豪的一天。同一年，我的女儿出生了。</p><p class='bio-entry'><strong>2003年</strong> — 我的女儿长大成人。她穿上了白大褂，在橘子加工厂的香水生产线上当技术员。</p><p class='bio-entry'><strong>2007年</strong> — 我女儿结婚了，丈夫是鲎实验室的技术员，做的都是高技术含量的工作。</p><p class='bio-entry'><strong>2008年</strong> — 我的宝贝外孙女出生了。她从小就聪明，成绩很好，我希望她像鲎实验室的主管一样，去海港城的皇家海洋大学，回来能当工程师。</p><p class='bio-entry'><strong>2023年12月24日</strong> — 我因病去世。我被葬在橘子岛的墓园里，我热爱这个岛。</p>"
+                },
+                "GroceryFounderF": {
+                        "x": 812.5,
+                        "y": 227,
+                        "bp": "orange_island",
+                        "by": "1973",
+                        "dy": "2025",
+                        "name_en": "Grocer",
+                        "name_zh": "杂货铺老板",
+                        "rel_en": "Grocer",
+                        "rel_zh": "杂货铺老板",
+                        "sum_en": "Born on the island, taken away at twelve, widowed at twenty-four. She came back and bought the store one year at a time.",
+                        "sum_zh": "岛上出生、12 岁离岛、24 岁丧夫。带着幼子回到橘子岛接手杂货铺，用二十年把它买了下来。",
+                        "bio_en": "<p class='bio-entry'><strong>October 20, 1973</strong> — I was born on Orange Island. Both my parents worked at the orange processing plant.</p><p class='bio-entry'><strong>1985</strong> — Like a lot of Orange Island workers, my parents had saved enough money and could not stand living by night any longer, so they took me back to our hometown, Old Sail Town.</p><p class='bio-entry'><strong>1994</strong> — I married a young man from Old Sail Town. Our son was born the next year.</p><p class='bio-entry'><strong>1997</strong> — My husband and I talked about going to Harbor City or Orange Island for a few years to save some money. Just as we were about to leave, he fell suddenly ill and died. I took care of everything he left behind and went back to Orange Island with my little boy. The general store on the island had belonged to the dock owner, but he had too much to handle and asked me to take it over.</p><p class='bio-entry'>I had been gone twelve years, and the islanders recognized me immediately. They carried me through the hardest years. The doctor waived our fees; the factory workers fixed our roof.</p><p class='bio-entry'>The store made very little money, but there was not much we needed to spend it on. We saved what we had and paid the dock owner at the end of every year, and over twenty years we really did buy the whole store. <strong>2017</strong> — My son and I had roots again.</p><p class='bio-entry'><strong>2020</strong> — My son got married. The next year I had a grandson.</p><p class='bio-entry'><strong>November 11, 2025</strong> — I died of illness and was buried on Orange Island. My life was complete.</p>",
+                        "bio_zh": "<p class='bio-entry'><strong>1973年10月20日</strong> — 我出生在橘子岛，父母都是橘子加工厂的工人。</p><p class='bio-entry'><strong>1985年</strong> — 和很多橘子岛的工人一样，我父母赚够了一些钱，不愿意再忍受昼伏夜出的作息，带我回到了老家旧帆镇。</p><p class='bio-entry'><strong>1994年</strong> — 我和旧帆镇的一个小伙子结婚了。次年，我们的儿子出生了。</p><p class='bio-entry'><strong>1997年</strong> — 我和丈夫商量去海港城或者橘子岛工作几年，攒点钱。我们快要出发的时候，丈夫因突发急病离开了我们。我收拾了丈夫的身后事，带着年幼的儿子回到了橘子岛。岛上的杂货铺本来是码头老板的，码头老板忙不过来，让我接手。</p><p class='bio-entry'>虽然离开十二年了，但是岛民马上都认出了我。他们帮我渡过了前几年最艰难的日子，医生免过我们的诊费，工人们帮我们修过屋顶。</p><p class='bio-entry'>杂货铺赚的钱很少，但好在我们的生活不怎么花钱。我们的钱都攒下来了，每年年底付给码头老板，二十年下来真的把杂货铺全部买下来了。<strong>2017年</strong>，我和孩子又是有根的人了。</p><p class='bio-entry'><strong>2020年</strong> — 儿子结婚了。第二年，我也有孙子了。</p><p class='bio-entry'><strong>2025年11月11日</strong> — 我因病去世，葬在了橘子岛。我的这一生很圆满。</p>"
+                },
+                "HotelFounderM": {
+                        "x": 463.5,
+                        "y": 135,
+                        "bp": "outside",
+                        "by": "1935",
+                        "dy": "2010",
+                        "name_en": "Hotel Founder",
+                        "name_zh": "旅馆创始人",
+                        "rel_en": "Hotel Founder",
+                        "rel_zh": "旅馆创始人",
+                        "sum_en": "Furnished his hotel entirely out of fittings salvaged from the island's old houses. Left one hard family rule behind.",
+                        "sum_zh": "用全岛老房子拆下来的旧物凑齐了旅馆陈设，并立下“长子不得离岛”的死规矩。",
+                        "bio_en": "<p class='bio-entry'><strong>April 16, 1935</strong> — I was born in Harbor City. My father was a craftsman.</p><p class='bio-entry'><strong>Late 1950s</strong> — The wave of migration and money on Orange Island, sixty kilometers out, drew me to it.</p><p class='bio-entry'>Orange Island was building everything at once then; new houses were going up everywhere. I fell in love at first sight with a three-story building facing the beach. The Island Mayor said it was planned as a hotel, but nobody dared take it on, because the fittings you had to buy all came from the mainland at double the price.</p><p class='bio-entry'>I took the building on impulse, and that nearly emptied my pockets. It was still bare inside. That did not stop me. I went all over the island collecting fittings stripped out of old houses: a red-brick oven from the 1920s, wooden railings from the 1930s, flowerpots from the 1940s. Eventually I had enough to furnish a hotel and a restaurant, and I opened in <strong>1961</strong>.</p><p class='bio-entry'>The restaurant and the hotel did wonderful business. Once there was money, some of the old things were replaced with new ones, but some I could not bear to part with — the red-brick oven, for one. Everything it bakes still tastes better than anything from a modern oven.</p><p class='bio-entry'>That three-story building is everything I have. To keep it in the family, I wrote out a hard rule in my own hand and framed it: <em>the eldest son shall not leave the island.</em></p><p class='bio-entry'><strong>September 9, 2010</strong> — I died in old age and was buried in the cemetery at the northeast corner of Orange Island. Looking southwest from my grave, you can see the thing I am proudest of in my life.</p>",
+                        "bio_zh": "<p class='bio-entry'><strong>1935年4月16日</strong> — 我出生在海港城，父亲是手艺人。</p><p class='bio-entry'><strong>1950年代末期</strong> — 六十公里外的橘子岛的移民潮和经济繁荣，吸引我来到了这座岛上。</p><p class='bio-entry'>当时的橘子岛正在大兴土木，到处都在盖新房子。我一眼爱上了面朝海滩的三层小楼，岛长说这是规划中的旅馆，但是没人敢接，因为需要购买的设施太多了，这些设施从大陆运过来，价格还得翻一倍。</p><p class='bio-entry'>我头脑一热，把三层小楼接下来了，这已经差不多花光了我全部的资金。小楼里还是空空的，这难不倒我。我全岛收集从旧房子里拆下来的设施：1920年代的红砖烤炉，1930年代的木制栏杆，1940年代的花盆。终于凑齐了旅馆和餐馆的陈设，并在 <strong>1961年</strong> 开了业。</p><p class='bio-entry'>餐馆和旅馆的生意好得不得了。赚了钱之后，有些旧物换了新，但有的我舍不得换——比如那个红砖烤炉，它比新式烤炉烤出来的东西都要好吃。</p><p class='bio-entry'>这栋三层小楼就是我的全部。为了保住这份基业，我亲手写下并裱起了一条死规矩：<strong>“长子不得离岛。”</strong></p><p class='bio-entry'><strong>2010年9月9日</strong> — 我年迈去世，安葬在橘子岛东北角的墓园里。从我的墓地往西南望去，能看到我一生最骄傲的资本。</p>"
+                },
+                "LibraryFounderM": {
+                        "x": 774.5,
+                        "y": 177,
+                        "bp": "orange_island",
+                        "by": "1952",
+                        "dy": "2025",
+                        "name_en": "Library Founder",
+                        "name_zh": "图书馆建立者",
+                        "rel_en": "Library Founder",
+                        "rel_zh": "图书馆建立者",
+                        "sum_en": "An island child who was never allowed out in daylight. He came home with a boatful of books and one very strange rule.",
+                        "sum_zh": "从小被禁止在白天出门的岛上孩子。带着一船旧书回岛，把娱乐中心改成图书馆，还定下一条古怪的借还规矩。",
+                        "bio_en": "<p class='bio-entry'><strong>November 3, 1952</strong> — I was born on Orange Island. My parents worked at the orange factory. They and all their workmates had come from off the island. Everyone was deeply grateful to Orange Island for steady work, steady wages, and a steady life. I liked Orange Island too, but I wanted to go outside in the daytime. \"The sun here is poison,\" the grown-ups always said. I said, \"I want to see how poisonous.\" They said, \"Not allowed.\"</p><p class='bio-entry'><strong>1960</strong> — The Island Mayor built the water park on the plaza and made the whole island live by night. I had been waiting to grow old enough that nobody could tell me \"not allowed\" anymore, so I could find out how poisonous the sun was. Now that was impossible, because the thing saying \"not allowed\" was the rules themselves.</p><p class='bio-entry'><strong>1970</strong> — I left the island for Plains University. It took me a long time to get back to sleeping at night like everyone else. In the huge, sunlit city library, I felt something I had never felt before: freedom that had never been tamed. The Holy Water Plaza came back to me in my dreams night after night. I kept feeling I ought to do something.</p><p class='bio-entry'><strong>1982</strong> — I came back to Orange Island with a boat full of carefully chosen secondhand books, took over the recreation center in the town center, and turned it into a library and cinema. I set one strange rule: <em>to return a book, put an old book in the place of the one you are borrowing.</em> The islanders called me the sleepyhead librarian, always dozing behind the shelves, and they said the library was a mess. But they always found something they were not looking for.</p><p class='bio-entry'><strong>October 5, 2025</strong> — I left this world.</p>",
+                        "bio_zh": "<p class='bio-entry'><strong>1952年11月3日</strong> — 我出生在橘子岛。父母是橘子工厂的工人。父母和工友们都是从岛外来的移民，大家都深深地感谢橘子岛，因为这里有稳定的工作和收入、稳定的生活环境。我也很喜欢橘子岛，但是我想白天出去玩。“岛上的太阳有毒”，大人们总是这么说。我说：“我想试试有多毒。”大人们说：“不准。”</p><p class='bio-entry'><strong>1960年</strong> — 岛长在广场建起了水上乐园，强制全岛人必须“昼伏夜出”。我原本想等我长大到没有人对我说“不准”的年龄，试试“太阳有多毒”，看来不可能了，因为对你说“不准”的变成了制度。</p><p class='bio-entry'><strong>1970年</strong> — 我离岛去了平原大学，花了好长时间才改回夜间休息的正常作息。在布满阳光的巨大市立图书馆里，我第一次感受到了未被驯化的自由。橘子岛的圣水广场夜夜回到我的梦中，我总觉得我应该做点什么。</p><p class='bio-entry'><strong>1982年</strong> — 我带着一船精心挑选的旧书回到了橘子岛，接手了镇中心的娱乐中心，把它改造成了图书馆和电影院。我定下了一条古怪的规矩：<strong>“归还书籍的方式是，把旧书放在新借的书的位置上。”</strong> 岛民们说我是“瞌睡虫图书管理员”，总在书架后睡觉，还说图书馆的书乱糟糟的。但他们总是能找到意外之喜。</p><p class='bio-entry'><strong>2025年10月5日</strong> — 我离开了人世。</p>"
+                },
+                "MrMailMoneyM": {
+                        "x": 662.5,
+                        "y": 200,
+                        "bp": "outside",
+                        "by": "1961",
+                        "dy": "2026",
+                        "name_en": "The One Who Sent His Wages Home",
+                        "name_zh": "工资全寄回老家的人",
+                        "rel_en": "The One Who Sent His Wages Home",
+                        "rel_zh": "工资全寄回老家的人",
+                        "sum_en": "Fifty years of wages posted back to Old Sail Town. He was still saving for a retirement on the Golden Coast.",
+                        "sum_zh": "半辈子的工资都寄回旧帆镇养家，剩下的钱攒着，为了退休后去黄金海岸生活。",
+                        "bio_en": "<p class='bio-entry'><strong>February 28, 1961</strong> — I was born in Old Sail Town. My parents were fishing people. I have two younger brothers and a younger sister.</p><p class='bio-entry'><strong>1975</strong> — I was fourteen, old enough to go to sea with my father. But there were no fish left inshore at all, and what the two of us brought in did not even cover the repairs on our boat. People said there were plenty of fish in deep water, but deep-water fishing belonged to the big Harbor City companies with the big boats. Children born in Old Sail Town got a thin childhood, and for most of us the only way out was to find a job in Harbor City.</p><p class='bio-entry'><strong>1976</strong> — I took the money from my father's sold boat and went to Harbor City. The whole family's hopes rode with me. What I had not expected was that fifteen is too young; almost nobody would hire me. Then I happened to see that Orange Island, sixty kilometers away, was recruiting seasonal orange pickers. Good pay, meals and lodging included, and the boat ticket both ways. So I went. It really was a good job. The pay was good and there was nothing to spend it on, so I could send nearly all of it home. My parents stopped worrying, and my brothers and sister kept growing.</p><p class='bio-entry'>I kept looking for a way to become a permanent worker on Orange Island. Four years later, in <strong>1980</strong>, the orange factory was hiring and I signed up immediately. I started as a loader. A year later I was trained onto the cold press, and my wages went up a lot. When my brothers and sister — who had been about to quit school — heard that, they cheered. Instead of dropping out to find work in Harbor City, they stayed in school.</p><p class='bio-entry'><strong>1980s</strong> — One after another they graduated from vocational school, and one of my brothers even won a scholarship to university. I was so proud of them.</p><p class='bio-entry'><strong>1990s</strong> — My parents said the family was no longer under any money pressure. I suggested we fix up the house. I wanted to save a few more years, then go home to Old Sail Town and start a family.</p><p class='bio-entry'><strong>From the 2000s</strong> — My parents started getting sick more easily. My brothers and sister had all just married and had children, and they were under pressure of their own. I was never going to spend my money anyway, so I sent it home to take care of our parents. And I saw a program about the Golden Coast again — beautiful, houses not expensive, fish still in the water nearby. I decided that was where I would go when I retired.</p><p class='bio-entry'><strong>2014 and 2015</strong> — My parents died, one after the other. My brothers and sister all had settled lives now, but every month I still walked to the post office in the dormitory building and wired them some money. Everything else I saved, for my life on the Golden Coast after I retired.</p><p class='bio-entry'><strong>May 30, 2026</strong> — I died in the great explosion at the orange factory.</p>",
+                        "bio_zh": "<p class='bio-entry'><strong>1961年2月28日</strong> — 我出生在旧帆镇，父母是渔民，我还有两个弟弟和一个妹妹。</p><p class='bio-entry'><strong>1975年</strong> — 我十四岁，到了随父亲出海捕鱼的年纪，但近海已经完全没有鱼了，我和父亲捕鱼的收入连家里渔船的维修费用都无法覆盖。人们说远洋的鱼很多，但远洋的捕鱼机会属于海港城大公司的大渔船。出生在旧帆镇的孩子们在镇上草草地过完童年和少年时期，大部分人的出路就是去海港城找份工作。</p><p class='bio-entry'><strong>1976年</strong> — 我带着父亲卖掉渔船的钱，来到了海港城，全家的希望都在我身上。然而没预料到的是，十五岁还太小，没有多少人愿意雇我。偶然的机会我看到离海港城六十公里的橘子岛在招季节性橘子采摘工人，薪资不错，包吃包住，而且包往返的船票。我来到了橘子岛，这确实是一份好工作，薪资不错，也没有什么花钱的地方，我能把绝大多数钱都寄回家。父母不再发愁，弟弟妹妹们也在长大。</p><p class='bio-entry'>我一直在找机会成为橘子岛的正式工人。终于在四年后，<strong>1980年</strong>，橘子工厂招工，我赶快报了名。一开始是搬运货物的工人，一年后经过培训，我升级成为冷压机器的操作工，工资涨了很多。正准备辍学的弟弟妹妹们知道了这个消息后欢呼雀跃，他们不再着急辍学去海港城谋生，而是继续在学校念书。</p><p class='bio-entry'><strong>1980年代</strong> — 弟弟妹妹们陆续从职业学校毕业，有一个弟弟甚至得到了奖学金去念大学。我真为他们骄傲。</p><p class='bio-entry'><strong>1990年代</strong> — 父母说家里已经没有经济压力了。我提议把房子修一修，我想再攒几年钱，然后回旧帆镇成立家庭。</p><p class='bio-entry'><strong>2000年代开始</strong> — 父母的身体开始容易生病了，弟弟妹妹都是刚刚结婚有孩子，压力也很大。我的钱反正也花不掉，就寄回家照顾父母。我又一次在电视上看到黄金海岸的介绍，很美，房子也不贵，近海有鱼，我决定退休了就去那里住。</p><p class='bio-entry'><strong>2014年和2015年</strong> — 父母相继过世，弟弟妹妹也都过上了稳定的生活，但是我每个月还是会去员工宿舍楼的邮局，给他们汇一些钱。剩下的钱我都攒起来了，为了退休后在黄金海岸的生活。</p><p class='bio-entry'><strong>2026年5月30日</strong> — 我死于橘子工厂的大爆炸。</p>"
+                },
+                "PowerStationMomofEngineerF": {
+                        "x": 712.5,
+                        "y": 178,
+                        "bp": "outside",
+                        "by": "1953",
+                        "dy": "2015",
+                        "name_en": "Mother of the Power Engineer",
+                        "name_zh": "电站工程师的妈妈",
+                        "rel_en": "Mother of the Power Engineer",
+                        "rel_zh": "电站工程师的妈妈",
+                        "sum_en": "She had her child late and left early, missing her son's eighteenth birthday.",
+                        "sum_zh": "年纪很大才有了孩子，却没能等到儿子的十八岁生日。",
+                        "bio_en": "<p class='bio-entry'><strong>August 30, 1953</strong> — I was born in Plains City.</p><p class='bio-entry'><strong>1997</strong> — I was already old when my child finally came.</p><p class='bio-entry'><strong>August 1, 2015</strong> — My body gave out and I left this world early, too early even to reach my son's eighteenth birthday. The great regret of my life is this: I had my child too late, and I died too soon.</p>",
+                        "bio_zh": "<p class='bio-entry'><strong>1953年8月30日</strong> — 我出生在平原市。</p><p class='bio-entry'><strong>1997年</strong> — 我在年纪很大的时候，才迎来了自己的孩子。</p><p class='bio-entry'><strong>2015年8月1日</strong> — 我因为身体原因，早早地离开了人世，甚至没能坚持到儿子的十八岁生日。我这一辈子最大的遗憾是：生孩子太晚，去世得又太早。</p>"
+                },
+                "OrchardSoldierM": {
+                        "x": 538.5,
+                        "y": 90,
+                        "bp": "outside",
+                        "by": "1918",
+                        "dy": "2008",
+                        "name_en": "Great War Veteran",
+                        "name_zh": "大战退伍老兵",
+                        "rel_en": "Great War Veteran",
+                        "rel_zh": "大战退伍老兵",
+                        "sum_en": "Exiled himself to the island to keep his family safe from his own night terrors. The dark here healed him.",
+                        "sum_zh": "为了不在夜惊中误伤家人而自我流放上岛，成为第一批夜班工人。橘子岛的黑夜治好了他。",
+                        "bio_en": "<p class='bio-entry'><strong>December 7, 1918</strong> — I was born in South Lake City.</p><p class='bio-entry'><strong>1940</strong> — I enlisted.</p><p class='bio-entry'><strong>1945</strong> — The war stopped for a while. I went home with my discharge pay and got my wife and children settled. But I had come back with severe post-traumatic stress. I did not sleep at all, and one night I had a war hallucination in the middle of a night terror and nearly hurt my own family. When I came out of it, all I saw was the terror in my wife's and daughter's eyes.</p><p class='bio-entry'>To keep them safe, the only thing I could do was exile myself. I came to Orange Island and became one of its first night-shift workers. I worked deep in the night, and the sweetness that burst out of the peel when I opened an orange washed the gunsmoke out of my head. In the daytime, behind heavy curtains, I could finally sleep six solid hours. The nights of Orange Island healed me.</p><p class='bio-entry'><strong>1946</strong> — My condition settled for good. I called home and told my wife and children I was safe. I wanted to ask, \"Are you still afraid of me coming home?\" but I could not get it out. My wife spoke first: \"Aren't you planning to come home yet?\"</p><p class='bio-entry'>After that I lived a quiet life, without incident.</p><p class='bio-entry'><strong>August 8, 2008</strong> — I left this world peacefully.</p>",
+                        "bio_zh": "<p class='bio-entry'><strong>1918年12月7日</strong> — 我出生在南湖市。</p><p class='bio-entry'><strong>1940年</strong> — 我应征入伍。</p><p class='bio-entry'><strong>1945年</strong> — 战争暂时结束了，我带着退伍费回到了家，安置了妻子和孩子。但我患上了严重的创伤后应激障碍（PTSD），彻夜失眠，甚至在一次夜惊中产生了战争幻觉，差点误伤了我的家人。等我惊醒过来，看到的只有妻子和女儿惊恐的眼神。</p><p class='bio-entry'>为了保护家人，我只能自我流放。我来到了橘子岛，成了橘子岛的第一批“夜班工人”。每天深夜劳作，剥开橘皮时喷涌而出的甜香洗刷了我的硝烟幻觉；白天，在厚重的窗帘下，我终于能安稳地睡上六个小时。橘子岛的黑夜治愈了我。</p><p class='bio-entry'><strong>1946年</strong> — 我的病情彻底稳定下来。我拨通了家里的电话，告诉妻子和孩子我很平安。我想问“你们还怕我回家吗？”却问不出口，妻子率先开了口：“你还不打算回家吗？”</p><p class='bio-entry'>后来，我过上了波澜不惊的日子。</p><p class='bio-entry'><strong>2008年8月8日</strong> — 我平静地离开了这个世界。</p>"
+                },
+                "BartenderM": {
+                        "x": 453.5,
+                        "y": 260,
+                        "bp": "outside",
+                        "by": "1985",
+                        "dy": "2023",
+                        "name_en": "Moonlight Bartender",
+                        "name_zh": "月光调酒师",
+                        "rel_en": "Moonlight Bartender",
+                        "rel_zh": "月光调酒师",
+                        "sum_en": "Born with xeroderma pigmentosum. One afternoon in the sun won him a gold medal and cost him his life.",
+                        "sum_zh": "患有着色性干皮病。一次白天的调酒比赛为他赢得金奖，也埋下了十年后的黑色素瘤。",
+                        "bio_en": "<p class='bio-entry'><strong>April 12, 1985</strong> — I was born in Harbor City. The doctors found out very quickly that I had xeroderma pigmentosum, a rare condition that makes ultraviolet light dangerous to me.</p><p class='bio-entry'><strong>2007</strong> — After twenty-two years of carefully avoiding the sun, I entered a daytime beach cocktail competition. My drink, the Solar Blaze, took the gold. I pulled off my heavy sun gear and walked up onto the podium in full daylight, with liquor and fruit juice spilling all over me.</p><p class='bio-entry'><strong>2008</strong> — I got married. My wife was a sun-loving girl with skin the color of wheat.</p><p class='bio-entry'><strong>2015</strong> — My wife found Orange Island on a map and suggested we move there. I took a job behind the bar of a restaurant on the island. Orange Island's nocturnal schedule let me work \"normal hours\" without wearing any protective gear at all. It was wonderful.</p><p class='bio-entry'><strong>2017</strong> — That one day of sun ten years earlier finally added up, and a melanoma grew out of my body. For the next six years I kept working as a bartender on painkillers, and I failed to notice that my wife's seasonal affective disorder was getting worse and worse.</p><p class='bio-entry'><strong>August 15, 2023</strong> — I left this world. Before I went, I bought my wife a boat ticket off the island.</p>",
+                        "bio_zh": "<p class='bio-entry'><strong>1985年4月12日</strong> — 我出生在海港城。但很快，医生就发现我患有着色性干皮病（XP），这是一种让我极度惧怕紫外线的罕见疾病。</p><p class='bio-entry'><strong>2007年</strong> — 认真躲避阳光二十二年的我，参加了一场白天的海滩调酒比赛，我的“阳光烈焰”获得了金奖。我扯下厚重的防晒服走上烈日下的领奖台，美酒和果汁都洒在我身上。</p><p class='bio-entry'><strong>2008年</strong> — 我结婚了，妻子是个小麦色肌肤的阳光女孩。</p><p class='bio-entry'><strong>2015年</strong> — 妻子在地图上找到了橘子岛，并提议我们移居过来，我在岛上的餐馆吧台工作。橘子岛昼伏夜出的作息让我能在“正常时间”内工作，而且不用穿任何防护服，这简直太棒了。</p><p class='bio-entry'><strong>2017年</strong> — 十年前的暴晒终于积累成了黑色素瘤，从我的身体里长了出来。接下来的六年内，我靠止痛药片坚持去当调酒师，却忽略了妻子的季节性抑郁症（SAD）越来越严重。</p><p class='bio-entry'><strong>2023年8月15日</strong> — 我离开了这个世界。去世前，我为妻子买好了离开小岛的船票。</p>"
+                },
+                "OldTeacherF": {
+                        "x": 612.5,
+                        "y": 167,
+                        "bp": "outside",
+                        "by": "1950",
+                        "dy": "2024",
+                        "name_en": "Schoolmaster",
+                        "name_zh": "教书先生",
+                        "rel_en": "Schoolmaster",
+                        "rel_zh": "教书先生",
+                        "sum_en": "Taught the island's children in the middle of the night for thirty years, and raised the girl who would replace them.",
+                        "sum_zh": "在半夜给岛上的孩子上课三十年，也养大了那个后来回岛接班的女孩小白。",
+                        "bio_en": "<p class='bio-entry'><strong>January 5, 1950</strong> — I was born into a scholarly household in Plains City. I started teaching at twenty and taught primary school children for twenty-five years.</p><p class='bio-entry'><strong>1995</strong> — I applied for a post on distant Orange Island. To fit their parents' working hours, the children here slept during the day and came to school in the middle of the night.</p><p class='bio-entry'>The children on Orange Island were not like the children I had taught before. They were shorter than mainland children, they started going nearsighted at seven or eight, and their tempers were short. They could finish middle school at our school, but some parents asked me whether they should send their children away earlier. It tore at me. I did not know which does more damage to a child: distance from their parents, or distance from the sun.</p><p class='bio-entry'><strong>1998</strong> — A little girl came to the school. Bai, three years old, from the lighthouse keeper's family. She was a quiet child. She said her dream was to be a teacher — the teacher at the Orange Island school. When Bai was five, something happened at home: her mother fell ill, and her father sold everything they owned and still could not save her. Bai and her father moved into the narrow lighthouse.</p><p class='bio-entry'><strong>2001</strong> — I brought Bai home to live with me. My house is small too, but it is far roomier than the inside of a lighthouse. She still went back once every day, because she said, \"I haven't made my dad laugh yet today.\"</p><p class='bio-entry'><strong>2010</strong> — Bai left the island for high school, and later she got into Plains University and chose education. She and I wrote to each other often. She had never forgotten the dream she had as a child: to be the teacher on Orange Island. I told her to go and look at what children elsewhere are like, because that is the only way to know what the children here are missing.</p><p class='bio-entry'><strong>2020</strong> — I was seventy, and I could feel that I would not be able to teach much longer, but I could not find anyone to take over. In the end I asked Bai. Ten days later she was back.</p><p class='bio-entry'>Bai is a good teacher, but she is always in a hurry. She runs on coffee and sleeping pills, she flipped her body clock the day she landed, she is always busy, she never has one second to spare. When the students play in the schoolyard, she comes out to check on them every five minutes. Bai, it is all right to stop and rest.</p><p class='bio-entry'><strong>June 20, 2024</strong> — I left this world on Orange Island. I am not worried about the students, because they have Bai. The one I worry about is Bai.</p>",
+                        "bio_zh": "<p class='bio-entry'><strong>1950年1月5日</strong> — 我出生在平原市的一个书香门第。从二十岁开始当老师，教了二十五年的小学生。</p><p class='bio-entry'><strong>1995年</strong> — 我应聘来到了偏远的橘子岛。这里的孩子们为了适应家长们工作的作息，白天睡觉，半夜上学。</p><p class='bio-entry'>橘子岛的孩子和我之前教过的孩子不太一样，他们比大陆的孩子矮，才七八岁年纪就开始近视，脾气很焦躁。孩子可以在学校念完初中，但有父母问我是否要更早送孩子出去念书，我很纠结，我不知道远离父母和远离阳光，哪个对孩子的伤害更大。</p><p class='bio-entry'><strong>1998年</strong> — 学校来了一个小女孩小白，三岁，是灯塔管理员一家的孩子，她是个安静的孩子。她说她的理想就是当老师，当橘子岛学校的老师。小白五岁的时候，家里发生了变故，妈妈生病了，爸爸卖掉家里所有的东西还是没能治好妈妈。小白和爸爸住进了狭窄的灯塔。</p><p class='bio-entry'><strong>2001年</strong> — 我把小白接到家里来住，虽然我的房子也很小，但是比灯塔里面宽敞多了。小白每天都要回去一次，因为她说：“我今天还没逗我爸爸笑过。”</p><p class='bio-entry'><strong>2010年</strong> — 小白离开岛去念高中，后来她考上了平原大学，选的教育学。我和小白经常写邮件，她一直没忘记小时候的梦想——当橘子岛的老师。我建议她多看看外面的孩子是怎么样的，这样才能知道岛上的孩子缺什么。</p><p class='bio-entry'><strong>2020年</strong> — 我已经七十岁了，我感觉我可能教不了很久了，却迟迟找不到能接替我的人选。无奈，我问了问小白。十天后小白就回来了。</p><p class='bio-entry'>小白是个好老师，但是总是急匆匆的。她靠喝咖啡和吃安眠药撑着，上岛的当天就倒好了时差，永远都在忙，没有一秒钟的空闲时间。学生们在学校院子里的游乐场玩的时候，她每五分钟都要来看一次。小白，你可以停下来休息一下。</p><p class='bio-entry'><strong>2024年6月20日</strong> — 我在橘子岛离开了人世。我不担心学生们，因为他们有小白。我担心的是小白。</p>"
+                },
+                "FounderGrandmaF": {
+                        "x": 737.5,
+                        "y": 107,
+                        "bp": "outside",
+                        "by": "1925",
+                        "dy": "2015",
+                        "name_en": "Botanical Lady",
+                        "name_zh": "香料女王",
+                        "rel_en": "Botanical Lady",
+                        "rel_zh": "香料女王",
+                        "sum_en": "Took the boat nobody else would take, pressed the first Moon-white Orange peel, and built a spice empire.",
+                        "sum_zh": "别人都不肯去的时候她去了橘子岛，压出第一批月白橘皮精油，建起了自己的香料帝国。",
+                        "bio_en": "<p class='bio-entry'><strong>May 8, 1925</strong> — I was born somewhere remote. I no longer remember the name of the place. For as long as I can remember, my parents were dragging me around Harbor City looking for work, and we lived inside a tiny spice workshop.</p><p class='bio-entry'><strong>1945</strong> — My parents died. I inherited their heavy cast-iron mortar, their copper sieves, their hand press, and their entire savings — enough for two years.</p><p class='bio-entry'><strong>1946</strong> — I carried the heavy equipment and the money to Plains University and found work as a lab assistant in the chemistry department. Because I had grown up around plant materials, I quickly became the person in that lab who best understood distillation, extraction, and handling plant matter.</p><p class='bio-entry'><strong>1948</strong> — With the professor's help, I passed a special entrance examination and enrolled in the chemistry department. <strong>1952</strong> — I earned my bachelor's degree in chemistry. I wanted to buy a distillation and extraction set and rebuild my parents' workshop, but the money was gone.</p><p class='bio-entry'><strong>1952</strong> — Orange Island, sixty kilometers from Harbor City, was building a perfume factory and looking for a partner in plant extraction. Most people in the trade refused to go. They said the seas were too rough, the equipment was too heavy, they did not want to be that far from family, and the lady of the island was an aristocrat who would never get along with people in our business. I went. And I met the woman who would later be called the Perfume Queen. We became close friends and business partners.</p><p class='bio-entry'><strong>End of 1952</strong> — I watched her sign away everything she owned for the loan that bought a cold-press line. And I used that line to extract the essence out of Moon-white Orange peel.</p><p class='bio-entry'><strong>1958</strong> — Blanc de Lune was a triumph. With my share from the label, I built spice factories all over the mainland. By the 1980s I had close to a third of the plant-materials industry. Calling me the Botanical Lady was not an exaggeration.</p><p class='bio-entry'>I stopped going to Orange Island much after that, but I always kept the house the Perfume Queen gave me. Every few years I took my children there on holiday to see where our spice empire began. Honestly, not one of my children or grandchildren inherited my fight or my stubbornness. That was the great worry of my old age.</p><p class='bio-entry'><strong>November 20, 2015</strong> — I left this world. I left the house on Orange Island to the granddaughter I had the most hope for.</p>",
+                        "bio_zh": "<p class='bio-entry'><strong>1925年5月8日</strong> — 我出生在一个偏远的地方，我已经不记得具体的地名了。从记事开始，我就被父母带着在海港城谋生，我们住在一个小小的香料作坊里。</p><p class='bio-entry'><strong>1945年</strong> — 父母去世，我接过他们留下的粗重铸铁研磨钵、铜筛和手工压榨器，以及他们全部的储蓄——够我用两年。</p><p class='bio-entry'><strong>1946年</strong> — 我带着沉重的手工设备和钱来到平原大学，在化学实验室找到一份实验助理的工作。因为从小接触植物香料，我很快成为教授手下最熟悉蒸馏、萃取和植物材料处理的人。</p><p class='bio-entry'><strong>1948年</strong> — 在教授的帮助下，我通过特别入学考试进入化学系。<strong>1952年</strong>，我取得化学学士学位。我想买一套蒸馏萃取设备重建父母留下的香料作坊，但是钱全都花光了。</p><p class='bio-entry'><strong>1952年</strong> — 离海港城六十公里的橘子岛上准备建香水工厂，寻找植物香料提取的合作商。很多同行都不愿意去，说风浪太大，说设备太重，说不想离家人太远，说岛上的太太是个贵族、和香料行业气场不合。我去了，我结识了那位后来被誉为“香水女王”的女士，后来我们成为了挚友与商业伙伴。</p><p class='bio-entry'><strong>1952年年底</strong> — 我亲眼看到香水女王抵押了自己的全部资产，换取贷款买了一套冷压设备。而我，用这套设备提取了月白橘果皮里的精华。</p><p class='bio-entry'><strong>1958年</strong> — “白之月”香水大获成功，我用“白之月”品牌分到的钱在大陆各地建起了香料工厂。到1980年代，我几乎垄断了三分之一的植物香料行业，他们叫我“香料女王”一点都不夸张。</p><p class='bio-entry'>后来我去橘子岛很少了，但是香水女王送的橘子岛的房子我一直保留着，我每隔几年都会带我的孩子们去橘子岛度假，看看我们家香料帝国的第一站。说实话，我的儿女辈和孙辈一个都没继承我的斗志和决心——这是我老年时期最大的担忧。</p><p class='bio-entry'><strong>2015年11月20日</strong> — 我离开了人世。橘子岛的房子留给了我最抱有期待的外孙女。</p>"
+                },
+                "ClinicAngelDaughterF": {
+                        "x": 612.5,
+                        "y": 307,
+                        "bp": "outside",
+                        "by": "2005",
+                        "dy": "2015",
+                        "name_en": "The Daughter Who Left Too Soon",
+                        "name_zh": "早逝的女儿",
+                        "rel_en": "The Daughter Who Left Too Soon",
+                        "rel_zh": "早逝的女儿",
+                        "sum_en": "Nine years old, hit by a car outside her own front door. Her soul kept drifting back to find her father.",
+                        "sum_zh": "九岁那年刚出家门就遭遇车祸。她的灵魂固执地飘回岛上，只为找到爸爸。",
+                        "bio_en": "<p class='bio-entry'><strong>November 11, 2005</strong> — I was born in Harbor City. My mom and dad and I were the happiest family in all of Harbor City.</p><p class='bio-entry'><strong>February 14, 2015</strong> — I had just stepped out of our front door when a speeding car hit me. I died right there.</p>",
+                        "bio_zh": "<p class='bio-entry'><strong>2005年11月11日</strong> — 我出生在海港城。我和爸爸妈妈是全海港城最幸福的家庭。</p><p class='bio-entry'><strong>2015年2月14日</strong> — 我刚出家门，就被一辆疾速行驶的汽车撞倒，当场去世。</p>"
+                },
+                "OrangeChiefAngelFather": {
+                        "x": 587.5,
+                        "y": 234,
+                        "bp": "outside",
+                        "by": "1976",
+                        "dy": "2026",
+                        "name_en": "Father of the Daughter Who Left Too Soon",
+                        "name_zh": "早逝女儿的父亲",
+                        "rel_en": "Father of the Daughter Who Left Too Soon",
+                        "rel_zh": "早逝女儿的父亲",
+                        "sum_en": "Moved to the island to get away from every street that reminded him of his daughter. Died in the factory explosion.",
+                        "sum_zh": "为躲开海港城里女儿的身影搬来橘子岛当厂长。死于 2026 年橘子加工厂大爆炸。",
+                        "bio_en": "<p class='bio-entry'><strong>March 31, 1976</strong> — I was born in Harbor City.</p><p class='bio-entry'><strong>2005</strong> — I got married. My daughter was born that November.</p><p class='bio-entry'><strong>February 14, 2015</strong> — My daughter was hit by a car and died at the scene.</p><p class='bio-entry'><strong>2017</strong> — My wife and I could not stand living in Harbor City any longer, because our daughter was in every park and on every street. We moved to Orange Island, where the orange processing plant needed a plant manager.</p><p class='bio-entry'>I know my wife packed our daughter's things and brought them to Orange Island too. She put the boxes in the small bedroom. Every day after I leave for work, she sits in that room and stares at nothing. I never say anything about it. The truth is I wish I had the chance to sit in that room all day myself.</p><p class='bio-entry'><strong>May 30, 2026</strong> — The orange processing plant exploded. A slab of the floor above came down on me. I was in the operating room for two days, and they could not bring me back.</p>",
+                        "bio_zh": "<p class='bio-entry'><strong>1976年3月31日</strong> — 我出生在海港城。</p><p class='bio-entry'><strong>2005年</strong> — 我结婚了，同年十一月女儿出生。</p><p class='bio-entry'><strong>2015年2月14日</strong> — 女儿遭遇车祸，当场去世。</p><p class='bio-entry'><strong>2017年</strong> — 我和妻子实在无法忍受住在海港城了，因为每个公园、每条街道都是女儿的身影。我们搬到橘子岛住，那里的橘子加工厂需要一个厂长。</p><p class='bio-entry'>我知道妻子把女儿的物品也打包带到了橘子岛，她把那些箱子放在小卧室里。每天我上班之后，她就坐在那个小卧室发呆。我不拆穿她，其实我希望我也能有机会整天坐在那个小卧室发呆。</p><p class='bio-entry'><strong>2026年5月30日</strong> — 橘子加工厂大爆炸，我被掉下来的楼板砸中。我在手术室躺了两天，没能被救回来。</p>"
+                },
+                "LikeVampireM": {
+                        "x": 424.5,
+                        "y": 212,
+                        "bp": "outside",
+                        "by": "1966",
+                        "dy": "2026",
+                        "name_en": "The One Called a Vampire",
+                        "name_zh": "被称作吸血鬼的人",
+                        "rel_en": "The One Called a Vampire",
+                        "rel_zh": "被称作吸血鬼的人",
+                        "sum_en": "A wealthy man with porphyria who hid on an island of night, with a Van Gogh in the smallest room.",
+                        "sum_zh": "患卟啉症的富家子弟，为躲避亲戚隐居到这座黑夜之岛，最小的房间里挂着一幅梵高。",
+                        "bio_en": "<p class='bio-entry'><strong>July 22, 1966</strong> — I was born into a wealthy merchant family in Harbor City. But I have had a rare porphyria since childhood, and even weak sunlight makes my skin break open. People called me Dracula behind my back. I did not mind. Like Dracula, I have money.</p><p class='bio-entry'><strong>1997</strong> — My parents died and left their entire estate to me, which astonished the relatives. \"Didn't they even have an illegitimate child?\" they said. They would have loved to be my parents' illegitimate children. Not long after the funeral, relatives who had never bothered to look at me twice started coming by to ask how I was doing. I am ill; I am not stupid. I knew what they were thinking. One day my mother's jewelry box was gone. That was when I understood the danger.</p><p class='bio-entry'>I had heard of a place at sea called Orange Island, where every single resident lived by night. To me that sounded like paradise from a story. I had my lawyer buy a small house there for me and seal up my assets on the mainland. On an ordinary day in May 1998, I boarded a boat to that island of night, alone, carrying my favorite things. The house was small but comfortable. Most of my collection I did not dare display. But I loved Van Gogh's <em>Starry Night Over the Rhône</em> too much to leave it shut in a dark crate, so I hung it in the smallest room, together with my grand piano.</p><p class='bio-entry'>I found work at the orange processing plant. Most of my workmates lived in the dormitory, though one of them had his own house right next door to mine, so I did not stand out too badly. Before long everyone on the island knew me as the young man \"who has to earn money to treat his illness.\"</p><p class='bio-entry'>Later I let my guard down, even invited workmates over to play cards. Once a workmate went into the small room looking for a bottle, and my stomach dropped while I scrambled for an excuse — <em>I'll say I painted a copy of it myself.</em> It turned out I had worried for nothing. He did not give the painting on the wall or the grand piano a second glance. He picked a bottle off the rack and went back to the living room.</p><p class='bio-entry'>These decades on the island have been peaceful. And slowly I worked out who my money should go to.</p><p class='bio-entry'><strong>May 30, 2026</strong> — The orange factory exploded, and I was killed in it.</p>",
+                        "bio_zh": "<p class='bio-entry'><strong>1966年7月22日</strong> — 我出生在海港城一个富庶的商人家庭。但我从小患有罕见的卟啉症，哪怕是微弱的阳光都会让我的皮肤溃烂。人们背地里叫我德库拉，我不介意，我和德库拉一样有钱。</p><p class='bio-entry'><strong>1997年</strong> — 我父母去世，遗产都留给了我——这让亲戚们非常惊讶。“他们连私生子都没有吗？”亲戚们说，他们恨不得自己是我父母的私生子。父母去世后不久，那些以前都不愿意多看我一眼的亲戚们经常过来嘘寒问暖。我只是病了，我不是傻了，我知道他们在想什么。母亲的珠宝盒某一天不见了，我意识到了危险。</p><p class='bio-entry'>我听说海上有一座名叫橘子岛的地方，那里的居民全体昼伏夜出。对我而言，那简直是传说中的天堂。我请律师出面帮忙买下了岛上的一栋小房子，封存好大陆的资产。<strong>1998年5月的一个平常日子</strong>，我独自一人带着最喜欢的一些东西登上了那座黑夜之岛。岛上的房子不大，但很舒服。我有很多收藏品不敢摆出来，只是梵高的《罗讷河上的星夜》我实在是喜欢，不忍它放在黑暗的箱子中，就把它挂在最小的房间里，和我的三角钢琴放在一起。</p><p class='bio-entry'>我在橘子加工厂找到一份工作，工友们大都住在员工宿舍，不过也有一个工友有自己的房子，就住在我隔壁，所以我也不算太显眼。不久，岛上的人都知道了我——那个“需要赚钱给自己治病”的小伙子。</p><p class='bio-entry'>后来我慢慢放下了防备，甚至邀请工友到家里来打牌。有一次工友找酒进了小房间，我心里一阵紧张，脑子里赶紧想对策——“我就说那幅画是我临摹的”。事实证明我的担忧是多余的，工友对墙上的画和三角钢琴都没多看一眼，从酒架上挑了一瓶酒就回到客厅了。</p><p class='bio-entry'>在岛上这几十年，我过得很安心，我也慢慢想清楚了我的财富应该留给谁。</p><p class='bio-entry'><strong>2026年5月30日</strong> — 橘子工厂发生大爆炸，我被炸死了。</p>"
+                },
+                "ExPoliceChiefM": {
+                        "x": 561.5,
+                        "y": 193,
+                        "bp": "outside",
+                        "by": "1958",
+                        "dy": "2026",
+                        "name_en": "First Sheriff",
+                        "name_zh": "第一任治安官",
+                        "rel_en": "First Sheriff",
+                        "rel_zh": "第一任治安官",
+                        "sum_en": "The island's first sheriff. He found the proof that it was murder, and hid it inside his own locker.",
+                        "sum_zh": "橘子岛最早的治安官。他找到了海洋学家被谋杀的证物，却把它锁进了自己的储物柜。",
+                        "bio_en": "<p class='bio-entry'><strong>September 12, 1958</strong> — I was born in Plains City.</p><p class='bio-entry'><strong>1985</strong> — I became the first sheriff Orange Island ever had. The island was in the middle of industrial expansion and tightening control, and I spent every day moving between the police station, the fire station, and the gym, doing my job. My greatest wish was the line I had engraved on the plate of the fire engine: <em>May our nights be forever quiet.</em></p><p class='bio-entry'><strong>April 2017</strong> — The marine scientist from the crab lab drowned. I was the first to reach the scene, and the first to see that it was murder. I found the dive watch with dried blue horseshoe crab blood on it, and the surviving pages of his waterproof notes. I did not pursue it. I closed the case as a drowning. I hid the evidence behind the slats inside my own locker in the changing room.</p><p class='bio-entry'><strong>2021</strong> — I retired from the sheriff's post on Orange Island and went back to Plains City.</p><p class='bio-entry'><strong>March 15, 2026</strong> — I died.</p>",
+                        "bio_zh": "<p class='bio-entry'><strong>1958年9月12日</strong> — 我出生在平原市。</p><p class='bio-entry'><strong>1985年</strong> — 我成为了橘子岛上最早的治安官。那时的岛屿正经历工业的扩张与管理的收紧，我每天在警察局、消防站和健身房之间穿梭，恪尽职守。我最大的心愿，就像我刻在消防车铭牌上的那句话一样：<strong>“愿我们的夜晚永远宁静。”</strong></p><p class='bio-entry'><strong>2017年4月</strong> — 鲎实验室的海洋学家溺水死亡，我是最先到达现场并发现谋杀真相的人——我找到了那块带有干涸蓝色鲎血的潜水表，以及他的防水笔记残页。然而，我没有查下去，以“溺水”结案。我把证物藏在了更衣室里我专属储物柜的百叶窗夹层中。</p><p class='bio-entry'><strong>2021年</strong> — 我从橘子岛治安官的职位退休，回到平原市养老。</p><p class='bio-entry'><strong>2026年3月15日</strong> — 我去世了。</p>"
+                },
+                "OrchardGardenerM": {
+                        "x": 687.5,
+                        "y": 57,
+                        "bp": "outside",
+                        "by": "1905",
+                        "dy": "1982",
+                        "name_en": "Master Grafter",
+                        "name_zh": "嫁接大师",
+                        "rel_en": "Master Grafter",
+                        "rel_zh": "嫁接大师",
+                        "sum_en": "A prize-winning horticulturist with a prison record. He buried his release papers under the twelve mother trees.",
+                        "sum_zh": "得过大奖、也坐过牢的园艺师。把释放文件和囚服编号布章埋进了十二棵母树旁的土里。",
+                        "bio_en": "<p class='bio-entry'><strong>August 14, 1905</strong> — I was born in Plains City.</p><p class='bio-entry'><strong>1928</strong> — I was a brilliant young talent in horticulture, and I won the Horticultural Society's Rising Star Award. I was full of myself then, and I had the finest honor in the field.</p><p class='bio-entry'><strong>Early 1930s</strong> — The Depression came through and life turned over in a single night. In one bad moment, I stole a bag of meat and went to prison for it.</p><p class='bio-entry'><strong>1935</strong> — I finished my sentence. Unemployment was terrifying, and nobody hiring would give a man with a record a second glance. I could see exactly three possibilities: starve, hang myself, or risk stealing again. God gave me a fourth. In the margin of a newspaper I found a recruitment notice from Orange Island. They needed an expert in grafting orange trees. The word \"expert\" felt like it belonged to another lifetime, but I was certain of one thing: I could graft orange trees.</p><p class='bio-entry'>I went to the island without a moment's hesitation. When I saw the twelve Moon-white Orange mother trees the owners had raised, I could tell almost at once that those twelve trees could be propagated reliably. I buried my prison release papers and a numbered patch cut from my prison uniform in the soil beside those twelve trees, forever.</p><p class='bio-entry'><strong>1936</strong> — We finished grafting the first stand of Sea-Thorn, five hundred trees. I did not spend a single coin of my first year's wages. I buried the money under that little grove, as the last defense I would have if the world threw me out again.</p><p class='bio-entry'><strong>1940</strong> — Three thousand orange trees had taken. My name was carved beside the owner's on the granite foundation stone halfway up the orchard slope.</p><p class='bio-entry'><strong>1945</strong> — After the great harvest, the owner gave me a share of the mainland sales routes. I went back to Plains City on a boat loaded with oranges in crates printed with my name.</p><p class='bio-entry'><strong>April 5, 1982</strong> — I died of old age and left this world.</p>",
+                        "bio_zh": "<p class='bio-entry'><strong>1905年8月14日</strong> — 我出生在平原市。</p><p class='bio-entry'><strong>1928年</strong> — 我曾是园艺界才华横溢的年轻新秀，并荣获了“园艺协会新秀奖”。那时的我意气风发，拥有着最顶尖的荣誉。</p><p class='bio-entry'><strong>1930年代初</strong> — 大萧条席卷而来，一夜之间生活天翻地覆。一念之差下，我因为偷窃了一袋肉而锒铛入狱。</p><p class='bio-entry'><strong>1935年</strong> — 我刑满释放。当时失业率高得吓人，我这种有案底的人，招工的人看都不会看一眼。我当时只能看到三种可能：要么饿死，要么上吊自杀，要么再冒险偷一次。上帝给了我第四条路：我在报纸的夹缝中看到了橘子岛的招工广告，他们需要会嫁接橘子树的专家。“专家”这个词恍若隔世，但是我确信我会嫁接橘子树。</p><p class='bio-entry'>我没有丝毫犹豫地上岛了，看到了老板夫妇养出的十二棵月白橘母树，我很快判断出这十二棵树有稳定繁殖的价值。我把监狱释放文件和一块从囚服上剪下来的编号布章，永远埋进了十二棵母树旁的土里。</p><p class='bio-entry'><strong>1936年</strong> — 我们完成了第一片海棘果树林的嫁接，一共五百棵。我第一年的薪水分文未动，我把这些钱埋在小树林地下，作为防备被社会再次扫地出门的最后底气。</p><p class='bio-entry'><strong>1940年</strong> — 三千棵橘子树活了。我的名字和老板并列刻在了果园半山腰的花岗岩基石上。</p><p class='bio-entry'><strong>1945年</strong> — 橘子树大丰收后，老板把大陆的销售线分给了我一些。我和一船装在印着我名字的木箱里的橘子一起回到了平原市。</p><p class='bio-entry'><strong>1982年4月5日</strong> — 我自然老去，离开了这个世界。</p>"
+                },
+                "PierDogOwnerM": {
+                        "x": 687.5,
+                        "y": 243,
+                        "bp": "orange_island",
+                        "by": "1978",
+                        "dy": "2022",
+                        "name_en": "Dockworker",
+                        "name_zh": "码头工人",
+                        "rel_en": "Dockworker",
+                        "rel_zh": "码头工人",
+                        "sum_en": "Loaded the island's cargo for twenty-six years. His dog Orange waited at the pier for a boat that came back without him.",
+                        "sum_zh": "在码头装卸押货二十六年。他捡回来的狗“橘子”，最后等回了一条没有他的船。",
+                        "bio_en": "<p class='bio-entry'><strong>July 1978</strong> — I was born in the workers' dormitory on Orange Island. My father worked at the orange factory.</p><p class='bio-entry'><strong>1996</strong> — I found work at the dock, loading and escorting cargo. Orange Island shipped to the mainland on Tuesday and Thursday mornings: canned oranges, perfume, chemical goods with hazard labels, expensive reagents that had to stay cold. Because the island and the mainland kept different hours, I worked from nine on Monday night straight through to six on Tuesday evening, and from nine Thursday night to six Friday evening.</p><p class='bio-entry'><strong>A stormy night in 2013</strong> — The wind was howling. I found a shivering puppy under the breakwater at the dock. He had probably come over from the mainland by accident on a boat. I carried him back to the dormitory, and it turned out he ate oranges. So I named him Orange. From then on Orange came to the dock with me every day, and if I sailed to the mainland he waited at the dock until I came back the next day, and we walked home together.</p><p class='bio-entry'><strong>2022</strong> — My parents died within months of each other. They did not want to be buried on Orange Island. In September I took them back to Old Sail Town. When I returned, the boss told me cargo had been piling up unshipped for over ten days and asked me to run it to the mainland as soon as possible. I loaded the boat, gave Orange a hug, and sailed.</p><p class='bio-entry'><strong>September 22, 2022</strong> — It rained hard that day. After we docked, I was checking the cargo at the stern when a sharp pain went through my chest. I lost my footing and fell into the water.</p>",
+                        "bio_zh": "<p class='bio-entry'><strong>1978年7月</strong> — 我出生在橘子岛的工人宿舍内，父亲是橘子工厂的工人。</p><p class='bio-entry'><strong>1996年</strong> — 我在码头上找到了一份工作，码头装卸工兼押货员。橘子岛每周二和周四早上都往大陆运货：橘子罐头、香水、标着危险标记的化工品、冷链运输的昂贵试剂。由于岛上和大陆的作息不一致，我每周一晚上九点会一直工作到周二晚上六点，周四晚上九点工作到周五晚上六点。</p><p class='bio-entry'><strong>2013年的一个深夜</strong> — 狂风大作。我在码头的防波堤下发现了一只瑟瑟发抖的小狗，大概是不小心随船从大陆到了岛上。我把它抱回了员工宿舍，它居然吃橘子，那么就叫橘子吧。从此，橘子每天跟我去码头上班；如果我送货去大陆，它就会在码头一直等我第二天回来，然后一起回家。</p><p class='bio-entry'><strong>2022年</strong> — 父母相继去世，他们不愿意安葬在橘子岛。九月，我把他们带回旧帆镇安葬。回到橘子岛，老板跟我说货物已经积压了十几天没有运了，要我尽快送货去大陆。我把货物搬上船，抱了抱橘子，就随船去了大陆。</p><p class='bio-entry'><strong>2022年9月22日</strong> — 那天雨下得特别大，到港后我在检查船尾的货物时，心脏一阵剧痛，站立不稳，跌落海中。</p>"
+                },
+                "ScientistFuranocoumarinM": {
+                        "x": 612.5,
+                        "y": 103,
+                        "bp": "outside",
+                        "by": "1922",
+                        "dy": "2023",
+                        "name_en": "Discoverer of Furanocoumarin",
+                        "name_zh": "呋喃香豆素发现者",
+                        "rel_en": "Discoverer of Furanocoumarin",
+                        "rel_zh": "呋喃香豆素发现者",
+                        "sum_en": "He found furanocoumarins, then spent seventy years trying to stop the world from misusing them.",
+                        "sum_zh": "发现并提纯了呋喃香豆素，此后用七十年的时间试图阻止全世界滥用它。",
+                        "bio_en": "<p class='bio-entry'><strong>September 1, 1922</strong> — I was born in Plains City.</p><p class='bio-entry'><strong>1942</strong> — I graduated from Plains University, the youngest graduate the chemistry department had, and stayed on to do research.</p><p class='bio-entry'><strong>1947</strong> — The high point of my life. I discovered furanocoumarins and invented a method to purify them, and for that I received the Fischer Prize for Chemical Discovery. I was the youngest recipient the prize ever had.</p><p class='bio-entry'><strong>1951</strong> — Orange Island was building an orange processing plant and brought me in as the expert to design the production line. I learned that the island's habit of sleeping by day and living by night came from \"the island's poisonous sun.\" But it was never the sun. It was furanocoumarins. The peel of the Moon-white Orange holds an enormous amount of them. On my advice, the factory added a line to produce furanocoumarins.</p><p class='bio-entry'>The production line was not hard to design, but I found a serious problem. The Island Mayor's daughter had congenital albinism, and some witch doctor from who-knows-where had claimed to be able to treat her — with the very compound I had discovered. I stopped that madness immediately and saved the girl's life. The Mayor's family treated me as a friend after that. They kept an office for me at the orange factory and gave me a house on the island.</p><p class='bio-entry'>That witch doctor made me realize furanocoumarins were already being misused. Back at Plains University, I turned my laboratory around and put everything into studying their harm to the human body. I submitted my results to every regulator and every association I could reach, trying to stop the misuse.</p><p class='bio-entry'>My warnings could not keep pace with how popular the compound was becoming. Within a dozen years of my discovery, furanocoumarins had spread into every field. Misuse in medicine was only the tip of it; the cosmetics industry was already buying them by the ton for tanning products.</p><p class='bio-entry'><strong>1960</strong> — Plains University took my laboratory back, because research into the harm furanocoumarins do makes no money at all. My funding had run dry five years earlier. All the university left me was a desk in a shared office and the small salary I earned by teaching.</p><p class='bio-entry'>Meanwhile the regulators and associations still would not ban the misuse. They only kept asking me for more evidence. I had lost my laboratory. I had no way to produce more evidence about the harm.</p><p class='bio-entry'>I remembered that I still had an office on Orange Island. I contacted the Island Mayor, and he agreed to let me use the furanocoumarin extraction equipment free of charge. In return, I took care of the orange factory's chemical problems.</p><p class='bio-entry'><strong>1961</strong> — I began travelling constantly between Orange Island and Plains City. The post office was the place I visited most. I kept mailing new evidence to the regulators, demanding a ban on the misuse of furanocoumarins.</p><p class='bio-entry'>The Mayor covered the laboratory and the materials, but there were plenty of other costs, and the fares back and forth were not small. A university teacher's salary came nowhere near covering it, so I sold off assets, one at a time, to fill the gap.</p><p class='bio-entry'><strong>1987</strong> — I retired. I sold the only home I had in Plains City and moved to Orange Island for good, to spend as little as possible.</p><p class='bio-entry'><strong>1990</strong> — After nearly forty years of arguing and travelling, the cosmetics associations in the major countries finally issued a warning about the toxicity of furanocoumarins.</p><p class='bio-entry'><strong>2014</strong> — Some countries began strictly limiting the use of furanocoumarins in medicines.</p><p class='bio-entry'><strong>2021</strong> — The global cosmetics industry formally restricted the ingredient.</p><p class='bio-entry'><strong>May 18, 2023</strong> — I died at the age of one hundred, still carrying my regret, because there are countries misusing it even now.</p>",
+                        "bio_zh": "<p class='bio-entry'><strong>1922年9月1日</strong> — 我出生在平原市。</p><p class='bio-entry'><strong>1942年</strong> — 我从平原大学毕业，是化学系最年轻的毕业生，我留在平原大学做研究。</p><p class='bio-entry'><strong>1947年</strong> — 我人生的高光时刻。我发现了呋喃香豆素，并发明了提纯方法，这一成就让我获得了“费舍尔化学发现奖”（Fischer Prize for Chemical Discovery），我是这个奖项最年轻的获奖者。</p><p class='bio-entry'><strong>1951年</strong> — 橘子岛筹建橘子加工厂，请我作为专家设计生产线。我了解到岛上昼伏夜出的作息源自“岛上毒辣的太阳”，而其实，是呋喃香豆素的问题！月白橘的果皮中含有巨量的呋喃香豆素！在我的建议下，橘子工厂增加了一个功能：生产呋喃香豆素。</p><p class='bio-entry'>生产线不难设计，但我发现了一个大问题：岛长的女儿患有先天性白化病，不知道从哪里来的巫医说可以治疗，而治疗的方案是用我发现的呋喃香豆素！我立刻阻止了这个疯狂的行为，救下那个小女孩一命。岛长一家把我当朋友，给我在橘子工厂留了一间办公室，还送给我一套岛上的住宅。</p><p class='bio-entry'>这个巫医的出现让我意识到呋喃香豆素在被滥用。回到平原大学后，我调整了实验室的研究方向，全力做呋喃香豆素的人体危害研究，我把研究成果提交到各个监管机构和协会，阻止呋喃香豆素的滥用。</p><p class='bio-entry'>而我的呼吁赶不上呋喃香豆素的风靡。从我发现呋喃香豆素后短短十几年时间，它已经迅速蔓延到了各个领域，医疗行业的滥用只是冰山一角，化妆品行业已经大量采购呋喃香豆素用于各类“美黑产品”。</p><p class='bio-entry'><strong>1960年</strong> — 我的实验室被平原大学收回了，因为我做的呋喃香豆素人体危害研究完全不赚钱，我的研究经费在五年前就已经见底。平原大学只留给我一张在公共办公间的桌子，以及仅仅靠教学生换来的微薄薪水。</p><p class='bio-entry'>而各个监管部门和协会迟迟不禁止呋喃香豆素的滥用，只是持续不断地问我要更多的证据。我已经失去了我的实验室，我没办法做更多的危害研究。</p><p class='bio-entry'>我想起来我在橘子岛还有一间办公室。我联系了岛长，他同意免费给我使用提取呋喃香豆素的设备。作为感谢，我负责解决橘子加工厂的化工问题。</p><p class='bio-entry'><strong>1961年</strong> — 我开始频繁地往返橘子岛和平原市，邮局是我去得最多的地方，我不断地寄新的证据给监管机构，要求禁止呋喃香豆素的滥用。</p><p class='bio-entry'>岛长支持了实验室和材料，但还有很多其他开销，我往返两岸的路费也不少。我当大学教员的工资远远不够，只能逐渐卖掉一些资产，补足资金上的缺口。</p><p class='bio-entry'><strong>1987年</strong> — 我退休了。我卖掉了在平原市的唯一住所，搬来橘子岛长住，尽量省钱。</p><p class='bio-entry'><strong>1990年</strong> — 经过我近四十年的艰难呼吁和奔走，主要几个国家的化妆品协会终于提出了“呋喃香豆素毒性”警告。</p><p class='bio-entry'><strong>2014年</strong> — 一些国家开始严格限定呋喃香豆素在药品中的使用。</p><p class='bio-entry'><strong>2021年</strong> — 全球化妆品行业正式限制了该成分的使用。</p><p class='bio-entry'><strong>2023年5月18日</strong> — 我以百岁高龄抱憾离世，因为还有几个国家在滥用呋喃香豆素。</p>"
+                },
+                "OrchardIrrigatorM": {
+                        "x": 437.5,
+                        "y": 84,
+                        "bp": "outside",
+                        "by": "1915",
+                        "dy": "1963",
+                        "name_en": "The One Who Nourished the Orange Grove",
+                        "name_zh": "滋养橘园的人",
+                        "rel_en": "The One Who Nourished the Orange Grove",
+                        "rel_zh": "滋养橘园的人",
+                        "sum_en": "Laid the veins of the hill: reservoir to water tower. He drowned in his own reservoir; nobody knew he couldn't swim.",
+                        "sum_zh": "从山脚蓄水池到山顶水塔，他铺出了这座山的血管。最后淹死在自己的蓄水池里——没人知道他不会游泳。",
+                        "bio_en": "<p class='bio-entry'><strong>February 10, 1915</strong> — I was born in North Mountain City, where water was always short. I was fascinated by the reservoir outside town from the time I was small. At fifteen they took me on as a helper, and my master said I was the most gifted apprentice he had ever seen.</p><p class='bio-entry'><strong>1938</strong> — I found a job on Orange Island where I would be in charge of everything: building an irrigation system for the orchard. It took me two full years to lay the pipes, from the reservoir at the foot of the hill to the water tower at the top. That system is like the blood vessels of this hill, and it is the work I am proudest of.</p><p class='bio-entry'><strong>After 1945</strong> — My life settled into a rhythm. Every day I walked the hill road from end to end, checked the reservoir at the bottom and the tank at the top, looked at the soil, and decided whether to release water. In decades, not one tree died of thirst and not one tree drowned.</p><p class='bio-entry'><strong>1960</strong> — The island made living by night compulsory. That same year I brought fertigation to the orange grove, so every tree would be cared for a little better.</p><p class='bio-entry'><strong>Deep in the night of August 24, 1963</strong> — I slipped while checking the reservoir at the foot of the hill and fell in. I drowned. My workmates searched all of Orange Island and never found my body. It would never have occurred to them that an irrigation engineer could not swim. To be honest, I had forgotten it myself. For decades I had thought of water as a friend.</p>",
+                        "bio_zh": "<p class='bio-entry'><strong>1915年2月10日</strong> — 我出生在北山市，那是一座缺水的城市。我从小就对市郊的水库特别感兴趣，十五岁被招进去当帮工，师傅说我是他见过最有天赋的学徒。</p><p class='bio-entry'><strong>1938年</strong> — 我在橘子岛找到一个能独当一面的工作：为果园建设一套灌溉系统。我花了整整两年时间，从山底的蓄水池到山顶的水塔，铺设了密密麻麻的管道。那套系统就像是这座山的血管，也是我最骄傲的作品。</p><p class='bio-entry'><strong>1945年之后</strong> — 我的生活变得非常规律。我每天的工作就是沿着山路走一遍，检查山脚的蓄水池、山顶的储水罐，观察土壤，决定是否需要放水。几十年来，没有一棵树因为缺水干死，也没有一棵树因为泡水涝死。</p><p class='bio-entry'><strong>1960年</strong> — 岛上强制定下了“昼伏夜出”的规矩，同年我为橘子园引入了水肥一体化系统，每棵树都能得到更好的照顾。</p><p class='bio-entry'><strong>1963年8月24日的深夜</strong> — 我在检查山底的蓄水池时不慎滑倒，掉进池中。我死了，淹死的。工友们找遍橘子岛，也没找到我的尸体。他们怎么也想不到，一个灌溉工程师竟然不会游泳。其实我也忘记我不会游泳了，几十年来一直觉得水是我的朋友。</p>"
+                }
         };
 
         let currentLang = 'en'; 
         let currentActiveChar = null;
+        // 记录已经解开过的角色，用于给热区留下"已读"痕迹
+        const solvedChars = new Set();
 
         // 获取 DOM 元素
         const treeContainer = document.getElementById('tree-container');
         const placeholder = document.getElementById('placeholder-text');
         const infoPanel = document.getElementById('info-panel');
         const portrait = document.getElementById('char-portrait');
+        const relationBox = document.getElementById('char-relation');
         
         const selBp = document.getElementById('select-birthplace');
         const selBy = document.getElementById('select-birthyear');
@@ -534,6 +1016,9 @@
                 const bgPosY = 50 - (2 * data.y);
                 portrait.style.backgroundPosition = `${bgPosX}px ${bgPosY}px`;
 
+                // 头像下面标注称谓（不剧透生卒年，那是谜题答案）
+                relationBox.textContent = currentLang === 'en' ? data.rel_en : data.rel_zh;
+
                 selBp.value = "";
                 selBy.value = "";
                 selDy.value = "";
@@ -545,7 +1030,28 @@
         const uniqueBirthYears = [...new Set(Object.values(charDatabase).map(c => c.by))].sort();
         const uniqueDeathYears = [...new Set(Object.values(charDatabase).map(c => c.dy))].sort();
 
-        // 5. 语言切换核心逻辑
+        // 5. 渲染已解锁的生平
+        function renderBio() {
+            if (!currentActiveChar) return;
+            const t = i18n[currentLang];
+            const c = currentActiveChar;
+
+            const name = currentLang === 'en' ? c.name_en : c.name_zh;
+            const rel = currentLang === 'en' ? c.rel_en : c.rel_zh;
+            const summary = currentLang === 'en' ? c.sum_en : c.sum_zh;
+            const body = currentLang === 'en' ? c.bio_en : c.bio_zh;
+
+            bioSection.innerHTML =
+                `<span class="bio-unlock-label">${t.unlockLabel}</span>` +
+                `<span class="bio-name">${name}</span>` +
+                `<span class="bio-meta">${rel} · ${t.lifespan(c.by, c.dy)}</span>` +
+                `<div class="bio-summary">${summary}</div>` +
+                body;
+            bioSection.style.display = 'block';
+            bioSection.scrollTop = 0;
+        }
+
+        // 6. 语言切换核心逻辑
         function applyLanguage(lang) {
             currentLang = lang;
             const textData = i18n[lang];
@@ -579,10 +1085,14 @@
             selBy.value = currBy;
             selDy.value = currDy;
 
+            // 头像下的称谓也要跟着换语言
+            if (currentActiveChar) {
+                relationBox.textContent = lang === 'en' ? currentActiveChar.rel_en : currentActiveChar.rel_zh;
+            }
+
             // 如果当前已经解锁了生平，立刻刷新其语言
             if (currentActiveChar && bioSection.style.display === 'block') {
-                const bioText = lang === 'en' ? currentActiveChar.bio_en : currentActiveChar.bio_zh;
-                bioSection.innerHTML = textData.bioPrefix + bioText;
+                renderBio();
             }
         }
 
@@ -594,7 +1104,7 @@
             });
         });
 
-        // 6. 解谜校验逻辑
+        // 7. 解谜校验逻辑
         function checkPuzzle() {
             if(!currentActiveChar) return;
 
@@ -603,9 +1113,13 @@
             const dyMatch = selDy.value === currentActiveChar.dy;
 
             if(bpMatch && byMatch && dyMatch) {
-                const bioText = currentLang === 'en' ? currentActiveChar.bio_en : currentActiveChar.bio_zh;
-                bioSection.innerHTML = i18n[currentLang].bioPrefix + bioText;
-                bioSection.style.display = 'block';
+                renderBio();
+                // 给对应热区留下"已解锁"标记
+                const spot = document.querySelector('.avatar-hotspot.active-spot');
+                if (spot) {
+                    solvedChars.add(spot.getAttribute('data-id'));
+                    spot.classList.add('solved-spot');
+                }
             } else {
                 bioSection.style.display = 'none';
             }
