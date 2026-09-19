@@ -71,9 +71,9 @@
         }
 
         .lang-btn.active {
-            color: #d35400;
+            color: #dac22b;
             font-weight: bold;
-            border-bottom: 2px solid #d35400;
+            border-bottom: 2px solid #dac22b;
         }
 
         /* =========================
@@ -99,8 +99,8 @@
         /* 隐形点击热区 */
         .avatar-hotspot {
             position: absolute;
-            width: 30px;
-            height: 30px;
+            width: 36px;
+            height: 36px;
             border-radius: 50%;
             transform: translate(-50%, -50%);
             cursor: pointer;
@@ -110,16 +110,23 @@
         }
 
         .avatar-hotspot:hover, .avatar-hotspot.active-spot {
-            border: 2px solid #d35400;
-            background: rgba(211, 84, 0, 0.3);
+            border: 2px solid #dac22b;
+            background: rgba(218, 194, 43, 0.25);
             transform: translate(-50%, -50%) scale(1.3);
-            box-shadow: 0 0 10px #d35400;
+            box-shadow: 0 0 12px rgba(218, 194, 43, 0.7); 
             z-index: 10;
         }
 
-        /* 已解锁过生平的热区，留一点暗金色余晖 */
+        /* 2. 已解锁过生平的热区：增加边框厚度、常驻柔和金光 */
         .avatar-hotspot.solved-spot {
-            border: 2px solid rgba(211, 84, 0, 0.45);
+            border: 2.5px solid rgba(218, 194, 43, 0.75);   /* 边框加粗并提高不透明度 */
+            box-shadow: 0 0 8px rgba(218, 194, 43, 0.5);   /* 增加一圈常驻的金色微光晕，一眼即可认出已解锁 */
+        }
+
+        /* 已解锁的角色在被点中（active）时，恢复最亮的外发光 */
+        .avatar-hotspot.solved-spot.active-spot {
+            border: 2px solid #dac22b;
+            box-shadow: 0 0 12px rgba(218, 194, 43, 0.7);
         }
 
         /* =========================
@@ -137,8 +144,9 @@
         }
 
         .character-info-placeholder {
-            color: #666;
-            font-size: 16px;
+            color: #f3eed5;
+            font-size: 18px;
+            font-weight: 500;
             text-align: center;
             letter-spacing: 1px;
             line-height: 1.5;
@@ -188,7 +196,7 @@
         }
 
         .puzzle-title {
-            color: #d35400;
+            color: #dac22b;
             font-size: 16px;
             font-weight: bold;
             margin-bottom: 5px;
@@ -230,14 +238,22 @@
         }
 
         select:focus {
-            border-color: #d35400;
+            border-color: #dac22b;
+        }
+
+        select:disabled {
+            background: #181818;
+            color: #dac22b;              /* 正确答案用主色金色显示 */
+            border-color: #333;
+            cursor: default;
+            opacity: 0.9;
         }
 
         #bio-section {
             display: none; 
-            background: rgba(211, 84, 0, 0.08);
+            background: rgba(218, 194, 43, 0.06);
             padding: 24px 26px;
-            border-left: 4px solid #d35400;
+            border-left: 4px solid #dac22b;
             border-radius: 4px;
             color: #ddd;
             line-height: 1.85;
@@ -247,15 +263,15 @@
             overflow-y: auto;
         }
 
-        /* 生平区滚动条，配合暗色主题 */
+        /* 滚动条调为暗金褐色系 */
         #bio-section::-webkit-scrollbar { width: 8px; }
         #bio-section::-webkit-scrollbar-track { background: rgba(0,0,0,0.3); border-radius: 4px; }
-        #bio-section::-webkit-scrollbar-thumb { background: #4a2a12; border-radius: 4px; }
-        #bio-section::-webkit-scrollbar-thumb:hover { background: #d35400; }
+        #bio-section::-webkit-scrollbar-thumb { background: #3d3512; border-radius: 4px; }
+        #bio-section::-webkit-scrollbar-thumb:hover { background: #dac22b; }
 
         .bio-unlock-label {
             display: block;
-            color: #d35400;
+            color: #dac22b;
             font-size: 12px;
             letter-spacing: 2px;
             text-transform: uppercase;
@@ -282,20 +298,16 @@
             font-style: italic;
             padding-bottom: 14px;
             margin-bottom: 14px;
-            border-bottom: 1px solid rgba(211, 84, 0, 0.25);
+            border-bottom: 1px solid rgba(218, 194, 43, 0.25); /* 分隔线半透明金色 */
         }
 
-        .bio-entry {
-            margin: 0 0 12px 0;
+        .bio-entry strong {
+            color: #ebd36b;                    /* 日期加粗色，从原亮橙 #e8944e 换为温润亮金 */
+            font-weight: 600;
         }
 
         .bio-entry:last-child {
             margin-bottom: 0;
-        }
-
-        .bio-entry strong {
-            color: #e8944e;
-            font-weight: 600;
         }
 
         @keyframes fadeIn {
@@ -324,15 +336,15 @@
         }
 
         .footer-links a {
-            color: #d35400;
+            color: #dac22b;
             text-decoration: none;
             font-size: 14px;
             transition: color 0.2s, text-shadow 0.2s;
         }
 
         .footer-links a:hover {
-            color: #ff7b25;
-            text-shadow: 0 0 8px rgba(211, 84, 0, 0.4);
+            color: #fae55c;
+            text-shadow: 0 0 8px rgba(218, 194, 43, 0.5);
         }
 
         .footer-copyright {
@@ -1697,20 +1709,39 @@
 
                 placeholder.style.display = 'none';
                 infoPanel.style.display = 'flex';
-                bioSection.style.display = 'none'; 
 
                 // --- 2 倍无损放大与居中算法 ---
-                // 因为目标是 100x100 容器 (中心在 50,50)，放大两倍后的实际像素坐标直接是 2 * 原坐标
                 const bgPosX = 50 - (2 * data.x);
                 const bgPosY = 50 - (2 * data.y);
                 portrait.style.backgroundPosition = `${bgPosX}px ${bgPosY}px`;
 
-                // 头像下面标注称谓（不剧透生卒年，那是谜题答案）
+                // 头像下面标注称谓
                 relationBox.textContent = currentLang === 'en' ? data.rel_en : data.rel_zh;
 
-                selBp.value = "";
-                selBy.value = "";
-                selDy.value = "";
+                // ⭐ 核心优化：判断该角色是否已经解锁过
+                if (solvedChars.has(id)) {
+                    // 已解锁：回填正确答案，锁定下拉框，直接展开生平
+                    selBp.value = data.bp;
+                    selBy.value = data.by;
+                    selDy.value = data.dy;
+
+                    selBp.disabled = true;
+                    selBy.disabled = true;
+                    selDy.disabled = true;
+
+                    renderBio();
+                } else {
+                    // 未解锁：恢复下拉框可选状态并清空，隐藏生平
+                    selBp.disabled = false;
+                    selBy.disabled = false;
+                    selDy.disabled = false;
+
+                    selBp.value = "";
+                    selBy.value = "";
+                    selDy.value = "";
+
+                    bioSection.style.display = 'none'; 
+                }
             });
             treeContainer.appendChild(spot);
         }
@@ -1806,6 +1837,11 @@
                     solvedChars.add(spot.getAttribute('data-id'));
                     spot.classList.add('solved-spot');
                 }
+
+                selBp.disabled = true;
+                selBy.disabled = true;
+                selDy.disabled = true;
+
             } else {
                 bioSection.style.display = 'none';
             }
