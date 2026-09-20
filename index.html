@@ -4,6 +4,16 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Whispers of Orange Island</title>
+    <meta name="description" content="Explore the family tree of Whispers of Orange Island. Complete each character's profile to unlock their biography.">
+    <meta property="og:type" content="website">
+    <meta property="og:title" content="Whispers of Orange Island">
+    <meta property="og:description" content="Explore the family tree of Whispers of Orange Island. Complete each character's profile to unlock their biography.">
+    
+    <meta property="og:image" content="https://orangeeater.com/images/family-tree/family-tree.png">
+    <meta property="og:image:width" content="850">
+    <meta property="og:image:height" content="400">
+    <meta property="og:image:alt" content="Whispers of Orange Island family tree">
+    <meta name="twitter:card" content="summary_large_image">
 
     <style>
         * { box-sizing: border-box; }
@@ -70,6 +80,11 @@
             color: #aaa;
         }
 
+        .lang-btn:focus-visible {
+            outline: 2px solid #dac22b;
+            outline-offset: 2px;
+        }
+
         .lang-btn.active {
             color: #dac22b;
             font-weight: bold;
@@ -81,18 +96,21 @@
            ========================= */
         #family-tree {
             width: 100%;
-            height: 400px;
-            display: flex;
-            justify-content: center;
-            align-items: center;
+            display: block;          /* ⭐ 不再用 flex 居中：flex 居中 + overflow 会让溢出内容左侧不可达 */
             background: #111;
             position: relative;
-            overflow: hidden;
+            overflow-x: auto;        /* ⭐ 窄屏时横向滚动（树的尺寸固定为 850x400，与游戏内图片一致） */
+            overflow-y: hidden;
+        }
+
+        #tree-container {
+            margin: 0 auto;          /* 宽屏居中；窄屏从左侧开始滚动 */
         }
 
         .family-tree-image {
             display: block;
             width: 850px;
+            max-width: none;
             height: 400px;
         }
 
@@ -109,12 +127,13 @@
             border: 2px solid transparent;
         }
 
-        .avatar-hotspot:hover, .avatar-hotspot.active-spot {
+        .avatar-hotspot:hover, .avatar-hotspot.active-spot, .avatar-hotspot:focus-visible {
             border: 2px solid #dac22b;
             background: rgba(218, 194, 43, 0.25);
             transform: translate(-50%, -50%) scale(1.3);
             box-shadow: 0 0 12px rgba(218, 194, 43, 0.7); 
             z-index: 10;
+            outline: none;
         }
 
         /* 2. 已解锁过生平的热区：增加边框厚度、常驻柔和金光 */
@@ -173,8 +192,10 @@
             height: 100px;
             border-radius: 50%;
             background-image: url('images/family-tree/family-tree.png');
-            background-size: 1700px 800px; 
+            background-size: 1700px 800px; /* 源图 850x400，放大 2 倍（与 JS 里的 2 * x 对应） */
             background-repeat: no-repeat;
+            background-origin: border-box; /* 定位基准包含边框，使 (50,50) 恰为圆心 */
+            image-rendering: pixelated;    /* 像素画放大：用最近邻，避免糊边 */
             border: 3px solid #444;
             box-shadow: 0 4px 15px rgba(0,0,0,0.6);
         }
@@ -183,7 +204,7 @@
             width: 120px;
             text-align: center;
             font-size: 12px;
-            color: #777;
+            color: #999;             /* 原 #777 对比度约 4.4:1，提高到 ≥4.5:1 */
             line-height: 1.5;
         }
 
@@ -349,7 +370,50 @@
 
         .footer-copyright {
             font-size: 12px;
-            color: #444;
+            color: #808080;          /* 原 #444 对比度约 2.1:1 */
+        }
+
+        /* =========================
+           窄屏适配（家族树本身横向滚动，这里只处理下方面板）
+           ========================= */
+        /* 头部：logo 宽度不固定，窄屏时让它按比例缩小，不把语言按钮挤出屏幕 */
+        @media (max-width: 900px) {
+            .header-content { width: 100%; padding: 14px 16px; gap: 12px; }
+            .header-left { width: auto; flex: 1 1 auto; min-width: 0; }
+            .header-right { width: auto; flex: 0 0 auto; gap: 6px; }
+            .site-logo {
+                display: block;
+                height: auto;
+                max-width: 100%;
+                object-fit: contain;
+                object-position: left center;
+            }
+        }
+
+        @media (max-width: 720px) {
+            #info-panel {
+                flex-direction: column;
+                align-items: center;
+                gap: 20px;
+            }
+            .info-right { width: 100%; }
+            .puzzle-section { flex-direction: column; }
+            #bio-section { padding: 18px 16px; }
+        }
+
+        #tree-hint {
+            display: none;           /* 只有树真的溢出时才由 JS 显示 */
+            background: #111;
+            color: #999;
+            font-size: 12px;
+            text-align: center;
+            padding: 8px 12px 10px;
+            letter-spacing: 1px;
+        }
+
+        @media (prefers-reduced-motion: reduce) {
+            #bio-section { animation: none; }
+            .avatar-hotspot { transition: none; }
         }
     </style>
 </head>
@@ -362,11 +426,11 @@
     <header id="site-header">
         <div class="header-content">
             <div class="header-left">
-                <img src="images/logo.png" alt="Whispers of Orange Island" class="site-logo">
+                <img src="images/logo.png" alt="Whispers of Orange Island" class="site-logo" width="500" height="50">
             </div>
             <div class="header-right">
-                <button class="lang-btn active" data-lang="en">EN</button>
-                <button class="lang-btn" data-lang="zh">中文</button>
+                <button class="lang-btn active" data-lang="en" lang="en" aria-pressed="true">EN</button>
+                <button class="lang-btn" data-lang="zh" lang="zh-CN" aria-pressed="false">中文</button>
             </div>
         </div>
     </header>
@@ -380,6 +444,9 @@
             <!-- 热区会由 JavaScript 自动基于精确像素计算并生成在此处 -->
         </div>
     </section>
+
+    <!-- 窄屏横向滑动提示（仅当家族树溢出时显示，用户滑动一次后自动隐藏） -->
+    <div id="tree-hint" aria-hidden="true"></div>
 
     <!-- =========================
          下半部分：解谜与生平信息
@@ -401,26 +468,26 @@
                 
                 <div class="puzzle-section">
                     <div class="select-group">
-                        <label id="ui-label-birthplace">Birth Place:</label>
+                        <label id="ui-label-birthplace" for="select-birthplace">Birth Place:</label>
                         <select id="select-birthplace">
                             <!-- 选项由 JS 生成 -->
                         </select>
                     </div>
                     <div class="select-group">
-                        <label id="ui-label-birthyear">Birth Year:</label>
+                        <label id="ui-label-birthyear" for="select-birthyear">Birth Year:</label>
                         <select id="select-birthyear">
                             <!-- 选项自动生成 -->
                         </select>
                     </div>
                     <div class="select-group">
-                        <label id="ui-label-deathyear">Death Year:</label>
+                        <label id="ui-label-deathyear" for="select-deathyear">Death Year:</label>
                         <select id="select-deathyear">
                             <!-- 选项自动生成 -->
                         </select>
                     </div>
                 </div>
 
-                <div id="bio-section"></div>
+                <div id="bio-section" aria-live="polite"></div>
             </div>
         </div>
     </section>
@@ -430,8 +497,8 @@
          ========================= -->
     <footer>
         <div class="footer-links">
-            <a href="https://store.steampowered.com/app/5165730" target="_blank">Steam</a>
-            <a href="https://discord.gg/GMvHrNVfru" target="_blank">Discord</a>
+            <a href="https://store.steampowered.com/app/5165730" target="_blank" rel="noopener noreferrer">Steam</a>
+            <a href="https://discord.gg/GMvHrNVfru" target="_blank" rel="noopener noreferrer">Discord</a>
             <a href="mailto:contact@orangeeater.com">contact@orangeeater.com</a>
         </div>
         <div class="footer-copyright">
@@ -452,6 +519,7 @@
                 byLabel: "Birth Year:",
                 dyLabel: "Death Year:",
                 selectDefault: "-- Select --",
+                swipeHint: "← Swipe to see the whole family tree →",
                 places: { "orange_island": "Orange Island", "outside": "Mainland" },
                 unlockLabel: "Biography Unlocked",
                 lifespan: function (by, dy) { return by + " – " + dy; }
@@ -463,6 +531,7 @@
                 byLabel: "出生年份 (Birth Year):",
                 dyLabel: "死亡年份 (Death Year):",
                 selectDefault: "-- 选择 --",
+                swipeHint: "← 左右滑动，查看完整家族树 →",
                 places: { "orange_island": "橘子岛", "outside": "大陆" },
                 unlockLabel: "解锁生平",
                 lifespan: function (by, dy) { return by + " 年 – " + dy + " 年"; }
@@ -1677,6 +1746,39 @@
         // 记录已经解开过的角色，用于给热区留下"已读"痕迹
         const solvedChars = new Set();
 
+        // ⭐ 进度与语言持久化（localStorage 在隐私模式/被禁用时会抛异常，统一 try/catch）
+        const STORAGE_SOLVED = 'ooi_solved_chars';
+        const STORAGE_LANG = 'ooi_lang';
+
+        function loadSolved() {
+            try {
+                const arr = JSON.parse(localStorage.getItem(STORAGE_SOLVED) || '[]');
+                if (Array.isArray(arr)) arr.forEach(id => { if (charDatabase[id]) solvedChars.add(id); });
+            } catch (e) { /* 忽略：本次只在内存里记录 */ }
+        }
+
+        function saveSolved() {
+            try { localStorage.setItem(STORAGE_SOLVED, JSON.stringify([...solvedChars])); } catch (e) { }
+        }
+
+        // 优先用上次手动选择的语言，其次看浏览器语言（中文 → zh），否则英文
+        function getInitialLang() {
+            try {
+                const saved = localStorage.getItem(STORAGE_LANG);
+                if (saved === 'en' || saved === 'zh') return saved;
+            } catch (e) { }
+            return (navigator.language || '').toLowerCase().startsWith('zh') ? 'zh' : 'en';
+        }
+
+        // 点击后把信息面板/生平区滚进视野（尊重"减少动态效果"系统设置）
+        function scrollIntoViewSafe(el) {
+            if (!el) return;
+            const reduce = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+            el.scrollIntoView({ behavior: reduce ? 'auto' : 'smooth', block: 'nearest' });
+        }
+
+        loadSolved();
+
         // 获取 DOM 元素
         const treeContainer = document.getElementById('tree-container');
         const placeholder = document.getElementById('placeholder-text');
@@ -1689,6 +1791,17 @@
         const selDy = document.getElementById('select-deathyear');
         const bioSection = document.getElementById('bio-section');
         const langButtons = document.querySelectorAll('.lang-btn');
+        const familyTree = document.getElementById('family-tree');
+        const treeHint = document.getElementById('tree-hint');
+        let treeHintDismissed = false;
+
+        // 家族树比屏幕宽（手机/窄窗口）时才显示滑动提示；用户滑动过一次就不再显示
+        function updateTreeHint() {
+            treeHint.style.display = (!treeHintDismissed && familyTree.scrollWidth > familyTree.clientWidth + 1) ? 'block' : 'none';
+        }
+        function dismissTreeHint() { treeHintDismissed = true; updateTreeHint(); }
+        familyTree.addEventListener('scroll', dismissTreeHint, { passive: true });
+        window.addEventListener('resize', updateTreeHint);
 
         // 3. 动态计算精确像素并生成所有热区
         // 底图尺寸 850x400
@@ -1696,10 +1809,21 @@
             const spot = document.createElement('div');
             spot.className = 'avatar-hotspot';
             spot.setAttribute('data-id', id);
+            // ⭐ 键盘/读屏可达：可聚焦、role=button；aria-label 在 applyLanguage 里随语言更新
+            spot.tabIndex = 0;
+            spot.setAttribute('role', 'button');
+            if (solvedChars.has(id)) spot.classList.add('solved-spot');
             // 计算基于精确像素的百分比，适配不同屏幕
             spot.style.left = `${(data.x / 850) * 100}%`;
             spot.style.top = `${(data.y / 400) * 100}%`;
             
+            spot.addEventListener('keydown', function(e) {
+                if (e.key === 'Enter' || e.key === ' ') {
+                    e.preventDefault();
+                    this.click();
+                }
+            });
+
             spot.addEventListener('click', function() {
                 // 处理选中状态的视觉反馈
                 document.querySelectorAll('.avatar-hotspot').forEach(s => s.classList.remove('active-spot'));
@@ -1729,7 +1853,7 @@
                     selBy.disabled = true;
                     selDy.disabled = true;
 
-                    renderBio();
+                    renderBio(true);
                 } else {
                     // 未解锁：恢复下拉框可选状态并清空，隐藏生平
                     selBp.disabled = false;
@@ -1741,6 +1865,7 @@
                     selDy.value = "";
 
                     bioSection.style.display = 'none'; 
+                    scrollIntoViewSafe(infoPanel);
                 }
             });
             treeContainer.appendChild(spot);
@@ -1751,7 +1876,7 @@
         const uniqueDeathYears = [...new Set(Object.values(charDatabase).map(c => c.dy))].sort();
 
         // 5. 渲染已解锁的生平
-        function renderBio() {
+        function renderBio(scrollToBio) {
             if (!currentActiveChar) return;
             const t = i18n[currentLang];
             const c = currentActiveChar;
@@ -1766,12 +1891,30 @@
                 body;
             bioSection.style.display = 'block';
             bioSection.scrollTop = 0;
+            // 只有"刚解锁 / 点击已解锁角色"才滚动；切换语言时刷新不应让页面跳动
+            if (scrollToBio) scrollIntoViewSafe(bioSection);
         }
 
         // 6. 语言切换核心逻辑
-        function applyLanguage(lang) {
+        function applyLanguage(lang, persist) {
             currentLang = lang;
             const textData = i18n[lang];
+
+            // 同步 <html lang>、按钮高亮状态，仅在用户手动切换时才写入偏好
+            document.documentElement.lang = lang === 'zh' ? 'zh-CN' : 'en';
+            treeHint.textContent = textData.swipeHint;
+            langButtons.forEach(b => {
+                const on = b.getAttribute('data-lang') === lang;
+                b.classList.toggle('active', on);
+                b.setAttribute('aria-pressed', on ? 'true' : 'false');
+            });
+            if (persist) { try { localStorage.setItem(STORAGE_LANG, lang); } catch (e) { } }
+
+            // 热区的读屏名称：只用称谓（不泄露需要解锁的姓名）
+            document.querySelectorAll('.avatar-hotspot').forEach(el => {
+                const d = charDatabase[el.getAttribute('data-id')];
+                if (d) el.setAttribute('aria-label', lang === 'en' ? d.rel_en : d.rel_zh);
+            });
 
             // 更新静态文本
             placeholder.innerHTML = textData.prompt;
@@ -1815,9 +1958,7 @@
 
         langButtons.forEach(btn => {
             btn.addEventListener('click', function() {
-                langButtons.forEach(b => b.classList.remove('active'));
-                this.classList.add('active');
-                applyLanguage(this.getAttribute('data-lang'));
+                applyLanguage(this.getAttribute('data-lang'), true);
             });
         });
 
@@ -1830,12 +1971,13 @@
             const dyMatch = selDy.value === currentActiveChar.dy;
 
             if(bpMatch && byMatch && dyMatch) {
-                renderBio();
+                renderBio(true);
                 // 给对应热区留下"已解锁"标记
                 const spot = document.querySelector('.avatar-hotspot.active-spot');
                 if (spot) {
                     solvedChars.add(spot.getAttribute('data-id'));
                     spot.classList.add('solved-spot');
+                    saveSolved();
                 }
 
                 selBp.disabled = true;
@@ -1852,7 +1994,8 @@
         selDy.addEventListener('change', checkPuzzle);
 
         // 初始化
-        applyLanguage('en');
+        applyLanguage(getInitialLang(), false);
+        updateTreeHint();
 
     </script>
 </body>
